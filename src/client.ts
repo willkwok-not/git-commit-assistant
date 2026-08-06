@@ -1,0 +1,252 @@
+import * as http from 'node:http';
+import * as https from 'node:https';
+import { StringDecoder } from 'node:string_decoder';
+import type { CancellationToken } from 'vscode';
+
+export interface CompletionOptions {
+  baseUrl: string;
+  apiKey?: string;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  timeoutMs: number;
+  cancellationToken?: CancellationToken;
+  onUpdate?: (content: string) => void;
+}
+
+export class RequestCancelledError extends Error {
+  constructor() {
+    super('模型请求已取消。');
+    this.name = 'RequestCancelledError';
+  }
+}
+
+type ChatContent = string | Array<{ type?: string; text?: string }>;
+
+interface ChatCompletionResponse {
+  choices?: Array<{
+    message?: { content?: ChatContent };
+  }>;
+  error?: { message?: string };
+}
+
+interface ChatCompletionChunk {
+  choices?: Array<{
+    delta?: { content?: ChatContent };
+  }>;
+  error?: { message?: string };
+}
+
+function completionUrl(baseUrl: string): URL {
+  const normalized = baseUrl.trim().replace(/\/+$/, '');
+  if (!normalized) {
+    throw new Error('请配置 aiGitCommit.baseUrl。');
+  }
+  const url = /\/chat\/completions$/i.test(normalized)
+    ? normalized
+    : `${normalized}/chat/completions`;
+  return new URL(url);
+}
+
+function contentToText(content: ChatContent | undefined): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (Array.isArray(content)) {
+    return content.map((part) => part.text ?? '').join('');
+  }
+  return '';
+}
+
+export async function createCommitMessage(options: CompletionOptions): Promise<string> {
+  const url = completionUrl(options.baseUrl);
+  const payload = JSON.stringify({
+    model: options.model,
+    messages: [
+      { role: 'system', content: options.systemPrompt },
+      { role: 'user', content: options.userPrompt }
+    ],
+    temperature: 0.2,
+    stream: true
+  });
+
+  const result = await requestCompletion(
+    url,
+    payload,
+    options.apiKey,
+    options.timeoutMs,
+    options.cancellationToken,
+    options.onUpdate
+  );
+  const trimmed = result.trim();
+  if (!trimmed) {
+    throw new Error('模型没有返回提交消息。');
+  }
+  return trimmed;
+}
+
+function parseNonStreamingResponse(text: string): string {
+  let parsed: ChatCompletionResponse;
+  try {
+    parsed = JSON.parse(text) as ChatCompletionResponse;
+  } catch {
+    throw new Error('模型接口返回了无法解析的响应。');
+  }
+  if (parsed.error?.message) {
+    throw new Error(`模型接口错误：${parsed.error.message}`);
+  }
+  return contentToText(parsed.choices?.[0]?.message?.content);
+}
+
+function requestCompletion(
+  url: URL,
+  body: string,
+  apiKey: string | undefined,
+  timeoutMs: number,
+  cancellationToken?: CancellationToken,
+  onUpdate?: (content: string) => void
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (cancellationToken?.isCancellationRequested) {
+      reject(new RequestCancelledError());
+      return;
+    }
+
+    const transport = url.protocol === 'https:' ? https : http;
+    const headers: Record<string, string | number> = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body)
+    };
+    if (apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    let settled = false;
+    let cancellationSubscription: { dispose(): void } | undefined;
+    const finishResolve = (value: string): void => {
+      if (!settled) {
+        settled = true;
+        cancellationSubscription?.dispose();
+        resolve(value);
+      }
+    };
+    const finishReject = (error: Error): void => {
+      if (!settled) {
+        settled = true;
+        cancellationSubscription?.dispose();
+        reject(error);
+      }
+    };
+
+    const req = transport.request(url, { method: 'POST', headers }, (res) => {
+      const decoder = new StringDecoder('utf8');
+      const status = res.statusCode ?? 0;
+      const successful = status >= 200 && status < 300;
+      let rawResponse = '';
+      let lineBuffer = '';
+      let streamedContent = '';
+
+      const consumeLine = (line: string): void => {
+        const normalized = line.replace(/\r$/, '');
+        if (!normalized.startsWith('data:')) {
+          return;
+        }
+        const data = normalized.slice(5).trim();
+        if (!data || data === '[DONE]') {
+          return;
+        }
+
+        let chunk: ChatCompletionChunk;
+        try {
+          chunk = JSON.parse(data) as ChatCompletionChunk;
+        } catch {
+          finishReject(new Error('模型接口返回了无法解析的流式响应。'));
+          req.destroy();
+          return;
+        }
+        if (chunk.error?.message) {
+          finishReject(new Error(`模型接口错误：${chunk.error.message}`));
+          req.destroy();
+          return;
+        }
+
+        const delta = contentToText(chunk.choices?.[0]?.delta?.content);
+        if (delta) {
+          streamedContent += delta;
+          try {
+            onUpdate?.(streamedContent);
+          } catch (error) {
+            finishReject(error instanceof Error ? error : new Error(String(error)));
+            req.destroy();
+          }
+        }
+      };
+
+      const consumeCompleteLines = (): void => {
+        let newline = lineBuffer.indexOf('\n');
+        while (newline >= 0 && !settled) {
+          consumeLine(lineBuffer.slice(0, newline));
+          lineBuffer = lineBuffer.slice(newline + 1);
+          newline = lineBuffer.indexOf('\n');
+        }
+      };
+
+      res.on('data', (chunk: Buffer) => {
+        const text = decoder.write(chunk);
+        rawResponse += text;
+        if (successful) {
+          lineBuffer += text;
+          consumeCompleteLines();
+        }
+      });
+      res.on('end', () => {
+        const finalText = decoder.end();
+        rawResponse += finalText;
+        if (successful) {
+          lineBuffer += finalText;
+          if (lineBuffer && !settled) {
+            consumeLine(lineBuffer);
+          }
+        }
+        if (settled) {
+          return;
+        }
+        if (!successful) {
+          let detail = rawResponse.slice(0, 500);
+          try {
+            const data = JSON.parse(rawResponse) as ChatCompletionResponse;
+            detail = data.error?.message ?? detail;
+          } catch {
+            // Keep the response excerpt for non-JSON errors.
+          }
+          finishReject(new Error(`模型请求失败（HTTP ${status}）：${detail}`));
+          return;
+        }
+        if (streamedContent) {
+          finishResolve(streamedContent);
+          return;
+        }
+        try {
+          const content = parseNonStreamingResponse(rawResponse);
+          if (content) {
+            onUpdate?.(content);
+          }
+          finishResolve(content);
+        } catch (error) {
+          finishReject(error instanceof Error ? error : new Error(String(error)));
+        }
+      });
+    });
+
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`模型请求超时（${Math.round(timeoutMs / 1000)} 秒）。`));
+    });
+    req.on('error', finishReject);
+    cancellationSubscription = cancellationToken?.onCancellationRequested(() => {
+      req.destroy();
+      finishReject(new RequestCancelledError());
+    });
+    req.write(body);
+    req.end();
+  });
+}
