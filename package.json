@@ -1,10 +1,15 @@
 {
   "name": "ai-git-commit",
   "displayName": "AI Git Commit",
+  "icon": "images/icon.png",
   "description": "根据 Git 暂存区变更调用 AI 自动生成提交消息。",
-  "version": "0.1.0",
-  "publisher": "local",
+  "version": "0.1.1",
+  "publisher": "WillKwok",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/willkwok-not/ai-git-commit.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
