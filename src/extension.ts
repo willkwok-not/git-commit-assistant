@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { createCommitMessage, RequestCancelledError } from "./client";
+import { createCommitMessage, MissingSettingError, RequestCancelledError } from "./client";
 import { getRepository, getStagedDiff } from "./git";
 import { buildPrompt, cleanCommitMessage } from "./prompt";
 
@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 async function generate(context: vscode.ExtensionContext): Promise<void> {
   if (activeGeneration) {
-    void vscode.window.showInformationMessage("AI Git Commit：已有生成任务正在进行。");
+    void vscode.window.showInformationMessage("AI Git Commit: 已有生成任务正在进行");
     return;
   }
 
@@ -31,7 +31,7 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "AI Git Commit: 正在生成提交消息…",
+        title: "AI Git Commit",
         cancellable: true,
       },
       async (progress, progressToken) => {
@@ -40,6 +40,8 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
         });
         try {
           const config = vscode.workspace.getConfiguration("aiGitCommit");
+          const baseUrl = requiredSetting(config.get<string>("baseUrl"), "aiGitCommit.baseUrl");
+          const model = requiredSetting(config.get<string>("model"), "aiGitCommit.model");
           const repository = await getRepository();
           const originalInput = repository.inputBox.value;
           let latestStreamedInput: string | undefined;
@@ -66,11 +68,11 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
             }
           }
 
-          progress.report({ message: prompt.truncated ? "差异较大，已截断后发送给模型" : "正在请求模型" });
+          progress.report({ message: prompt.truncated ? "正在请求模型（自动截断）" : "正在请求模型" });
           const rawMessage = await createCommitMessage({
-            baseUrl: config.get<string>("baseUrl", "https://api.openai.com/v1"),
+            baseUrl,
             apiKey,
-            model: requiredSetting(config.get<string>("model"), "aiGitCommit.model"),
+            model,
             systemPrompt: prompt.system,
             userPrompt: prompt.user,
             timeoutMs: config.get<number>("requestTimeoutSeconds", 60) * 1000,
@@ -94,11 +96,17 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
         }
       },
     );
-    // void vscode.window.showInformationMessage('AI Git Commit：提交消息已写入源代码管理输入框。');
+    // void vscode.window.showInformationMessage('AI Git Commit: 提交消息已写入源代码管理输入框');
   } catch (error) {
-    if (!(error instanceof vscode.CancellationError) && !(error instanceof RequestCancelledError)) {
+    if (error instanceof MissingSettingError) {
+      const openSettings = "打开设置";
+      const selection = await vscode.window.showErrorMessage(`AI Git Commit: ${error.message}`, openSettings);
+      if (selection === openSettings) {
+        await vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${context.extension.id}`);
+      }
+    } else if (!(error instanceof vscode.CancellationError) && !(error instanceof RequestCancelledError)) {
       const message = error instanceof Error ? error.message : String(error);
-      void vscode.window.showErrorMessage(`AI Git Commit：${message}`);
+      void vscode.window.showErrorMessage(`AI Git Commit: ${message}`);
     }
   } finally {
     if (!completed) {
@@ -119,7 +127,7 @@ function cancelGeneration(): void {
 async function setApiKey(context: vscode.ExtensionContext): Promise<void> {
   const apiKey = await promptForApiKey(context);
   if (apiKey) {
-    void vscode.window.showInformationMessage("AI Git Commit：API Key 已安全保存。");
+    void vscode.window.showInformationMessage("AI Git Commit: API Key 已安全保存");
   }
 }
 
@@ -140,13 +148,13 @@ async function promptForApiKey(context: vscode.ExtensionContext): Promise<string
 
 async function clearApiKey(context: vscode.ExtensionContext): Promise<void> {
   await context.secrets.delete(API_KEY_SECRET);
-  void vscode.window.showInformationMessage("AI Git Commit：API Key 已清除。");
+  void vscode.window.showInformationMessage("AI Git Commit: API Key 已清除");
 }
 
 function requiredSetting(value: string | undefined, name: string): string {
   const trimmed = value?.trim();
   if (!trimmed) {
-    throw new Error(`请先配置 ${name}。`);
+    throw new MissingSettingError(name);
   }
   return trimmed;
 }

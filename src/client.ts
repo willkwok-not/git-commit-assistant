@@ -21,7 +21,20 @@ export class RequestCancelledError extends Error {
   }
 }
 
+export class MissingSettingError extends Error {
+  constructor(public readonly settingId: string) {
+    super(`请配置 ${settingId}。`);
+    this.name = 'MissingSettingError';
+  }
+}
+
 type ChatContent = string | Array<{ type?: string; text?: string }>;
+type ApiFormat = 'chat-completions' | 'responses';
+
+interface CompletionTarget {
+  url: URL;
+  format: ApiFormat;
+}
 
 interface ChatCompletionResponse {
   choices?: Array<{
@@ -37,15 +50,43 @@ interface ChatCompletionChunk {
   error?: { message?: string };
 }
 
-function completionUrl(baseUrl: string): URL {
-  const normalized = baseUrl.trim().replace(/\/+$/, '');
+interface ResponsesResponse {
+  output_text?: string;
+  output?: Array<{
+    content?: Array<{ type?: string; text?: string }>;
+  }>;
+  error?: { message?: string };
+}
+
+interface ResponsesChunk {
+  type?: string;
+  delta?: string;
+  error?: { message?: string };
+}
+
+function completionTarget(baseUrl: string): CompletionTarget {
+  const normalized = baseUrl.trim();
   if (!normalized) {
-    throw new Error('请配置 aiGitCommit.baseUrl。');
+    throw new MissingSettingError('aiGitCommit.baseUrl');
   }
-  const url = /\/chat\/completions$/i.test(normalized)
-    ? normalized
-    : `${normalized}/chat/completions`;
-  return new URL(url);
+
+  const url = new URL(normalized);
+  const pathname = url.pathname.replace(/\/+$/, '') || '/';
+  url.pathname = pathname;
+
+  if (/\/responses$/i.test(pathname)) {
+    return { url, format: 'responses' };
+  }
+  if (/\/chat\/completions$/i.test(pathname)) {
+    return { url, format: 'chat-completions' };
+  }
+
+  // Keep the common OpenAI-compatible base URL behavior. Any other path is
+  // considered an explicit third-party endpoint and is requested unchanged.
+  if (pathname === '/' || /\/v1$/i.test(pathname)) {
+    url.pathname = `${pathname === '/' ? '' : pathname}/chat/completions`;
+  }
+  return { url, format: 'chat-completions' };
 }
 
 function contentToText(content: ChatContent | undefined): string {
@@ -59,19 +100,27 @@ function contentToText(content: ChatContent | undefined): string {
 }
 
 export async function createCommitMessage(options: CompletionOptions): Promise<string> {
-  const url = completionUrl(options.baseUrl);
-  const payload = JSON.stringify({
-    model: options.model,
-    messages: [
-      { role: 'system', content: options.systemPrompt },
-      { role: 'user', content: options.userPrompt }
-    ],
-    temperature: 0.2,
-    stream: true
-  });
+  const target = completionTarget(options.baseUrl);
+  const payload = JSON.stringify(target.format === 'responses'
+    ? {
+        model: options.model,
+        instructions: options.systemPrompt,
+        input: options.userPrompt,
+        stream: true
+      }
+    : {
+        model: options.model,
+        messages: [
+          { role: 'system', content: options.systemPrompt },
+          { role: 'user', content: options.userPrompt }
+        ],
+        temperature: 0.2,
+        stream: true
+      });
 
   const result = await requestCompletion(
-    url,
+    target.url,
+    target.format,
     payload,
     options.apiKey,
     options.timeoutMs,
@@ -85,21 +134,33 @@ export async function createCommitMessage(options: CompletionOptions): Promise<s
   return trimmed;
 }
 
-function parseNonStreamingResponse(text: string): string {
-  let parsed: ChatCompletionResponse;
+function parseNonStreamingResponse(text: string, format: ApiFormat): string {
+  let parsed: ChatCompletionResponse | ResponsesResponse;
   try {
-    parsed = JSON.parse(text) as ChatCompletionResponse;
+    parsed = JSON.parse(text) as ChatCompletionResponse | ResponsesResponse;
   } catch {
     throw new Error('模型接口返回了无法解析的响应。');
   }
   if (parsed.error?.message) {
     throw new Error(`模型接口错误：${parsed.error.message}`);
   }
-  return contentToText(parsed.choices?.[0]?.message?.content);
+  if (format === 'chat-completions') {
+    return contentToText((parsed as ChatCompletionResponse).choices?.[0]?.message?.content);
+  }
+  const response = parsed as ResponsesResponse;
+  if (response.output_text) {
+    return response.output_text;
+  }
+  return response.output
+    ?.flatMap((item) => item.content ?? [])
+    .filter((part) => part.type === 'output_text' || part.type === undefined)
+    .map((part) => part.text ?? '')
+    .join('') ?? '';
 }
 
 function requestCompletion(
   url: URL,
+  format: ApiFormat,
   body: string,
   apiKey: string | undefined,
   timeoutMs: number,
@@ -156,9 +217,9 @@ function requestCompletion(
           return;
         }
 
-        let chunk: ChatCompletionChunk;
+        let chunk: ChatCompletionChunk | ResponsesChunk;
         try {
-          chunk = JSON.parse(data) as ChatCompletionChunk;
+          chunk = JSON.parse(data) as ChatCompletionChunk | ResponsesChunk;
         } catch {
           finishReject(new Error('模型接口返回了无法解析的流式响应。'));
           req.destroy();
@@ -170,7 +231,11 @@ function requestCompletion(
           return;
         }
 
-        const delta = contentToText(chunk.choices?.[0]?.delta?.content);
+        const delta = format === 'responses'
+          ? ((chunk as ResponsesChunk).type === 'response.output_text.delta'
+              ? (chunk as ResponsesChunk).delta ?? ''
+              : '')
+          : contentToText((chunk as ChatCompletionChunk).choices?.[0]?.delta?.content);
         if (delta) {
           streamedContent += delta;
           try {
@@ -227,7 +292,7 @@ function requestCompletion(
           return;
         }
         try {
-          const content = parseNonStreamingResponse(rawResponse);
+          const content = parseNonStreamingResponse(rawResponse, format);
           if (content) {
             onUpdate?.(content);
           }

@@ -3,8 +3,8 @@
   "displayName": "AI Git Commit",
   "icon": "images/icon.png",
   "description": "根据 Git 暂存区变更调用 AI 自动生成提交消息。",
-  "version": "0.1.1",
-  "publisher": "WillKwok",
+  "version": "0.1.2",
+  "publisher": "willkwok",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -58,13 +58,11 @@
       "properties": {
         "aiGitCommit.baseUrl": {
           "type": "string",
-          "default": "https://api.openai.com/v1",
           "order": 1,
-          "description": "OpenAI 兼容接口的基础地址，或完整的 /chat/completions 地址。"
+          "description": "OpenAI 兼容接口地址。根地址或以 /v1 结尾时自动使用 /chat/completions；也可填写完整的 /chat/completions、/responses 或第三方自定义接口地址。"
         },
         "aiGitCommit.model": {
           "type": "string",
-          "default": "gpt-4o-mini",
           "order": 2,
           "description": "用于生成提交消息的模型名称。"
         },

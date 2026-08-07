@@ -1,41 +1,39 @@
 # AI Git Commit
 
-一个轻量的 VS Code 扩展：读取 Git **暂存区 diff**，调用 OpenAI 兼容的大模型生成提交消息，并自动填入源代码管理输入框。
+根据 Git 暂存区变更调用 AI 生成提交消息，并自动填入 VS Code 源代码管理输入框
 
-## 功能
+## 主要功能
 
-- 从源代码管理标题栏一键生成提交消息
-- 生成期间显示停止按钮，可随时取消模型请求
-- 模型输出会流式更新到 Git 提交消息输入框
-- 支持 OpenAI 兼容的 `/chat/completions` 接口
+- 点击源代码管理标题栏的 ✨ 按钮即可生成提交消息
+- 生成内容会流式显示，生成过程中可随时取消
+- 支持 OpenAI 兼容的 Chat Completions 和 Responses API
 - 支持 Conventional Commits、提交语言和自定义规则
-- 多模块变更仍生成一个提交标题，必要时在正文中分条概括
-- 多 Git 仓库工作区选择
-- API Key 使用 VS Code SecretStorage 保存，不进入 `settings.json`
-- 暂存差异大小限制和提示词注入防护
+- 支持多 Git 仓库工作区
+- API Key 保存在 VS Code SecretStorage 中
 
-## 开发运行
+## 快速开始
 
-```bash
-npm install
-npm run compile
-```
+1. 打开 VS Code 设置，搜索 `AI Git Commit`
+2. 填写 `Base Url` 和 `Model`
+3. 从命令面板运行 `AI Git Commit: 设置 API Key`
+4. 在 Git 面板暂存需要提交的文件
+5. 点击源代码管理标题栏的 ✨ 按钮
+6. 检查生成的提交消息后再提交
 
-在 VS Code 中打开本目录，按 `F5` 启动 Extension Development Host。
+## 接口地址
 
-## 使用
+扩展不预设接口地址和模型名称。支持以下地址形式：
 
-1. 在设置中填写 `AI Git Commit: Base Url` 和 `Model`。
-2. 运行命令 `AI Git Commit: 设置 API Key`。
-3. 在 Git 面板暂存需要提交的文件。
-4. 点击源代码管理标题栏的 ✨ 按钮，或从命令面板运行 `AI: 生成 Git 提交消息`。
-5. 检查生成结果后再提交。
+- 根地址或以 `/v1` 结尾：自动使用 `/chat/completions`
+- 以 `/chat/completions` 结尾：使用 Chat Completions 格式
+- 以 `/responses` 结尾：使用 Responses API 格式
+- 其他完整地址：原样请求，并按 Chat Completions 格式处理
 
-默认配置使用 `https://api.openai.com/v1`。其他兼容服务可填写基础地址，也可直接填写完整的 `/chat/completions` 地址。
+例如，填写 `https://api.openai.com/v1` 时，实际请求地址为 `https://api.openai.com/v1/chat/completions`
 
-### 本地无鉴权模型示例
+### 本地无鉴权服务
 
-使用提供 OpenAI 兼容接口的本地服务时，可以设置：
+使用 Ollama 等提供 OpenAI 兼容接口的本地服务时，可以设置：
 
 ```json
 {
@@ -45,27 +43,20 @@ npm run compile
 }
 ```
 
-## 配置项
+## 配置
 
-| 设置 | 默认值 | 说明 |
-| --- | --- | --- |
-| `aiGitCommit.baseUrl` | `https://api.openai.com/v1` | API 基础地址或完整接口地址 |
-| `aiGitCommit.model` | `gpt-4o-mini` | 模型名称 |
-| `aiGitCommit.language` | `简体中文` | 提交消息语言 |
-| `aiGitCommit.useConventionalCommits` | `true` | 使用 Conventional Commits |
-| `aiGitCommit.customInstructions` | 空 | 额外生成规则 |
-| `aiGitCommit.maxDiffCharacters` | `30000` | 最大发送字符数 |
-| `aiGitCommit.requestTimeoutSeconds` | `60` | 请求超时秒数 |
-| `aiGitCommit.requireApiKey` | `true` | 是否要求 API Key |
-
-## 打包
-
-```bash
-npm run package
-```
-
-这会生成可通过“扩展：从 VSIX 安装”安装的 `.vsix` 文件。
+| 设置                                 | 默认值     | 说明                                |
+| ------------------------------------ | ---------- | ----------------------------------- |
+| `aiGitCommit.baseUrl`                | 无         | OpenAI 兼容的基础地址或完整接口地址 |
+| `aiGitCommit.model`                  | 无         | 模型名称                            |
+| `aiGitCommit.requireApiKey`          | `true`     | 是否要求 API Key                    |
+| `aiGitCommit.language`               | `简体中文` | 提交消息语言                        |
+| `aiGitCommit.useConventionalCommits` | `true`     | 使用 Conventional Commits           |
+| `aiGitCommit.customInstructions`     | 空         | 额外生成规则                        |
+| `aiGitCommit.maxDiffCharacters`      | `30000`    | 最大发送字符数                      |
+| `aiGitCommit.requestTimeoutSeconds`  | `60`       | 请求超时秒数                        |
 
 ## 隐私说明
 
-生成时，暂存区 diff 会发送到你配置的模型服务。请确认所选服务符合代码和数据安全要求。扩展不会自动执行 `git commit`。
+生成时，Git 暂存区 diff 会发送到你配置的模型服务。请确认所选服务符合你的代码和数据安全要求。
+扩展不会自动执行 `git commit`。
