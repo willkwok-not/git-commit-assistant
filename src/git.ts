@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export interface GitRepository {
   readonly rootUri: vscode.Uri;
@@ -17,19 +17,19 @@ interface GitExtension {
 }
 
 export async function getRepository(): Promise<GitRepository> {
-  const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
+  const extension = vscode.extensions.getExtension<GitExtension>("vscode.git");
   if (!extension) {
-    throw new Error('未找到 VS Code 内置 Git 扩展。');
+    throw new Error("未找到 VS Code 内置 Git 扩展");
   }
 
   const git = extension.isActive ? extension.exports : await extension.activate();
   if (!git.enabled) {
-    throw new Error('VS Code 的 Git 功能当前未启用。');
+    throw new Error("VS Code 的 Git 功能当前未启用");
   }
 
   const api = git.getAPI(1);
   if (api.repositories.length === 0) {
-    throw new Error('当前工作区中没有 Git 仓库。');
+    throw new Error("当前工作区中没有 Git 仓库");
   }
 
   const activeUri = vscode.window.activeTextEditor?.document.uri;
@@ -48,9 +48,9 @@ export async function getRepository(): Promise<GitRepository> {
     api.repositories.map((repository) => ({
       label: vscode.workspace.asRelativePath(repository.rootUri, false),
       description: repository.rootUri.fsPath,
-      repository
+      repository,
     })),
-    { placeHolder: '选择要生成提交消息的 Git 仓库' }
+    { placeHolder: "选择要生成提交消息的 Git 仓库" },
   );
 
   if (!selected) {
@@ -62,7 +62,7 @@ export async function getRepository(): Promise<GitRepository> {
 export async function getStagedDiff(repository: GitRepository): Promise<string> {
   const diff = await repository.diff(true);
   if (!diff.trim()) {
-    throw new Error('暂存区没有变更。请先暂存文件，再生成提交消息。');
+    throw new Error("暂存区没有变更，请先暂存文件");
   }
   return diff;
 }
