@@ -1,5 +1,7 @@
 # AI Git Commit 开发文档
 
+[简体中文] | [[English](README_DEV_EN.md)]
+
 面向扩展开发、测试和打包维护。普通使用方法请参阅 [README.md](README.md)
 
 ## 技术概览
@@ -52,6 +54,16 @@ src/
 | 其他路径                    | 使用原地址和 Chat Completions 格式 |
 
 Chat Completions 使用 `messages` 请求体，并解析 `choices[].delta.content`；Responses API 使用 `instructions` 和 `input` 请求体，并解析 `response.output_text.delta` 事件。两种格式都兼容非流式响应
+
+## 本地化
+
+- `package.nls.json` 保存清单和设置的默认英文文案
+- `package.nls.zh-cn.json` 保存清单和设置的简体中文翻译
+- `l10n/bundle.l10n.json` 保存运行时默认英文文案
+- `l10n/bundle.l10n.zh-cn.json` 保存运行时简体中文翻译
+- 扩展宿主中的运行时文案使用 `vscode.l10n.t()`
+
+`aiGitCommit.language` 只控制生成的提交消息语言，与 VS Code 界面语言相互独立
 
 ## 测试
 

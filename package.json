@@ -2,8 +2,8 @@
   "name": "ai-git-commit",
   "displayName": "AI Git Commit",
   "icon": "images/icon.png",
-  "description": "根据 Git 暂存区变更调用 AI 自动生成提交消息。",
-  "version": "0.1.3",
+  "description": "%extension.description%",
+  "version": "0.2.0",
   "publisher": "willkwok",
   "license": "MIT",
   "repository": {
@@ -18,25 +18,26 @@
     "Other"
   ],
   "main": "./out/extension.js",
+  "l10n": "./l10n",
   "contributes": {
     "commands": [
       {
         "command": "aiGitCommit.generate",
-        "title": "AI Git Commit: 生成提交消息",
+        "title": "%command.generate.title%",
         "icon": "$(sparkle)"
       },
       {
         "command": "aiGitCommit.cancel",
-        "title": "AI Git Commit: 取消生成",
+        "title": "%command.cancel.title%",
         "icon": "$(debug-stop)"
       },
       {
         "command": "aiGitCommit.setApiKey",
-        "title": "AI Git Commit: 设置 API Key"
+        "title": "%command.setApiKey.title%"
       },
       {
         "command": "aiGitCommit.clearApiKey",
-        "title": "AI Git Commit: 清除 API Key"
+        "title": "%command.clearApiKey.title%"
       }
     ],
     "menus": {
@@ -59,18 +60,18 @@
         "aiGitCommit.baseUrl": {
           "type": "string",
           "order": 1,
-          "description": "OpenAI 兼容接口地址。根地址或以 /v1 结尾时自动使用 /chat/completions；也可填写完整的 /chat/completions、/responses 或第三方自定义接口地址。"
+          "description": "%configuration.baseUrl.description%"
         },
         "aiGitCommit.model": {
           "type": "string",
           "order": 2,
-          "description": "用于生成提交消息的模型名称。"
+          "description": "%configuration.model.description%"
         },
         "aiGitCommit.requireApiKey": {
           "type": "boolean",
           "default": true,
           "order": 3,
-          "description": "是否要求 API Key。使用 Ollama 等本地无鉴权服务时可关闭。"
+          "description": "%configuration.requireApiKey.description%"
         },
         "aiGitCommit.language": {
           "type": "string",
@@ -87,21 +88,21 @@
             "Italiano",
             "Русский"
           ],
-          "default": "简体中文",
+          "default": "English",
           "order": 4,
-          "description": "提交消息使用的语言。"
+          "description": "%configuration.language.description%"
         },
         "aiGitCommit.useConventionalCommits": {
           "type": "boolean",
           "default": true,
           "order": 5,
-          "description": "要求生成 Conventional Commits 格式的消息。"
+          "description": "%configuration.useConventionalCommits.description%"
         },
         "aiGitCommit.customInstructions": {
           "type": "string",
           "default": "",
           "order": 6,
-          "markdownDescription": "附加给模型的提交消息规则，例如：`主题不超过 50 个字符`。"
+          "markdownDescription": "%configuration.customInstructions.description%"
         },
         "aiGitCommit.maxDiffCharacters": {
           "type": "number",
@@ -109,7 +110,7 @@
           "minimum": 1000,
           "maximum": 200000,
           "order": 7,
-          "description": "发送给模型的暂存区 diff 最大字符数。超出部分会被截断。"
+          "description": "%configuration.maxDiffCharacters.description%"
         },
         "aiGitCommit.requestTimeoutSeconds": {
           "type": "number",
@@ -117,7 +118,7 @@
           "minimum": 5,
           "maximum": 300,
           "order": 8,
-          "description": "模型请求超时时间（秒）。"
+          "description": "%configuration.requestTimeoutSeconds.description%"
         }
       }
     }
@@ -126,7 +127,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test out/test/prompt.test.js out/test/client.test.js",
+    "test": "npm run compile && node --test out/test/prompt.test.js out/test/client.test.js out/test/localization.test.js",
     "package": "npx @vscode/vsce package"
   },
   "devDependencies": {

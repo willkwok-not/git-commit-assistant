@@ -1,0 +1,23 @@
+{
+  "A generation task is already running.": "A generation task is already running.",
+  "Requesting model (diff truncated automatically)": "Requesting model (diff truncated automatically)",
+  "Requesting model": "Requesting model",
+  "The model returned an empty commit message.": "The model returned an empty commit message.",
+  "Open Settings": "Open Settings",
+  "Configure {0}.": "Configure {0}.",
+  "API key saved securely.": "API key saved securely.",
+  "Set AI Model API Key": "Set AI Model API Key",
+  "The API key is stored in VS Code SecretStorage.": "The API key is stored in VS Code SecretStorage.",
+  "API key cannot be empty.": "API key cannot be empty.",
+  "API key cleared.": "API key cleared.",
+  "The model API returned an invalid response.": "The model API returned an invalid response.",
+  "Model API error: {0}": "Model API error: {0}",
+  "The model API returned an invalid streaming response.": "The model API returned an invalid streaming response.",
+  "Model request failed (HTTP {0}): {1}": "Model request failed (HTTP {0}): {1}",
+  "Model request timed out after {0} seconds.": "Model request timed out after {0} seconds.",
+  "The built-in VS Code Git extension was not found.": "The built-in VS Code Git extension was not found.",
+  "Git support is currently disabled in VS Code.": "Git support is currently disabled in VS Code.",
+  "No Git repositories were found in the current workspace.": "No Git repositories were found in the current workspace.",
+  "Select a Git repository for commit message generation": "Select a Git repository for commit message generation",
+  "No staged changes. Stage files before generating a commit message.": "No staged changes. Stage files before generating a commit message."
+}

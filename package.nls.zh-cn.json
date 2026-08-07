@@ -1,0 +1,15 @@
+{
+  "extension.description": "根据 Git 暂存区变更调用 AI 自动生成提交消息。",
+  "command.generate.title": "AI Git Commit: 生成提交消息",
+  "command.cancel.title": "AI Git Commit: 取消生成",
+  "command.setApiKey.title": "AI Git Commit: 设置 API Key",
+  "command.clearApiKey.title": "AI Git Commit: 清除 API Key",
+  "configuration.baseUrl.description": "OpenAI 兼容接口地址。根地址或以 /v1 结尾时自动使用 /chat/completions；也可填写完整的 /chat/completions、/responses 或第三方自定义接口地址。",
+  "configuration.model.description": "用于生成提交消息的模型名称。",
+  "configuration.requireApiKey.description": "是否要求 API Key。使用 Ollama 等本地无鉴权服务时可关闭。",
+  "configuration.language.description": "提交消息使用的语言。",
+  "configuration.useConventionalCommits.description": "要求生成 Conventional Commits 格式的消息。",
+  "configuration.customInstructions.description": "附加给模型的提交消息规则，例如：`主题不超过 50 个字符`。",
+  "configuration.maxDiffCharacters.description": "发送给模型的暂存区 diff 最大字符数。超出部分会被截断。",
+  "configuration.requestTimeoutSeconds.description": "模型请求超时时间（秒）。"
+}

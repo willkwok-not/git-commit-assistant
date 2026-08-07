@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { createCommitMessage, MissingSettingError, RequestCancelledError } from "./client";
+import { createCommitMessage, MissingSettingError, ModelRequestError, RequestCancelledError } from "./client";
 import { getRepository, getStagedDiff } from "./git";
 import { buildPrompt, cleanCommitMessage } from "./prompt";
 
@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 async function generate(context: vscode.ExtensionContext): Promise<void> {
   if (activeGeneration) {
-    void vscode.window.showInformationMessage("AI Git Commit: 已有生成任务正在进行");
+    void vscode.window.showInformationMessage(`AI Git Commit: ${vscode.l10n.t("A generation task is already running.")}`);
     return;
   }
 
@@ -68,7 +68,11 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
             }
           }
 
-          progress.report({ message: prompt.truncated ? "正在请求模型（自动截断）" : "正在请求模型" });
+          progress.report({
+            message: prompt.truncated
+              ? vscode.l10n.t("Requesting model (diff truncated automatically)")
+              : vscode.l10n.t("Requesting model"),
+          });
           const rawMessage = await createCommitMessage({
             baseUrl,
             apiKey,
@@ -87,7 +91,7 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
           });
           const message = cleanCommitMessage(rawMessage);
           if (!message) {
-            throw new Error("模型返回的提交消息为空。");
+            throw new ModelRequestError("empty-response");
           }
           repository.inputBox.value = message;
           completed = true;
@@ -96,16 +100,18 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
         }
       },
     );
-    // void vscode.window.showInformationMessage('AI Git Commit: 提交消息已写入源代码管理输入框');
   } catch (error) {
     if (error instanceof MissingSettingError) {
-      const openSettings = "打开设置";
-      const selection = await vscode.window.showErrorMessage(`AI Git Commit: ${error.message}`, openSettings);
+      const openSettings = vscode.l10n.t("Open Settings");
+      const selection = await vscode.window.showErrorMessage(
+        `AI Git Commit: ${vscode.l10n.t("Configure {0}.", error.settingId)}`,
+        openSettings,
+      );
       if (selection === openSettings) {
         await vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${context.extension.id}`);
       }
     } else if (!(error instanceof vscode.CancellationError) && !(error instanceof RequestCancelledError)) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = localizeError(error);
       void vscode.window.showErrorMessage(`AI Git Commit: ${message}`);
     }
   } finally {
@@ -127,17 +133,17 @@ function cancelGeneration(): void {
 async function setApiKey(context: vscode.ExtensionContext): Promise<void> {
   const apiKey = await promptForApiKey(context);
   if (apiKey) {
-    void vscode.window.showInformationMessage("AI Git Commit: API Key 已安全保存");
+    void vscode.window.showInformationMessage(`AI Git Commit: ${vscode.l10n.t("API key saved securely.")}`);
   }
 }
 
 async function promptForApiKey(context: vscode.ExtensionContext): Promise<string | undefined> {
   const value = await vscode.window.showInputBox({
-    title: "设置 AI 模型 API Key",
-    prompt: "API Key 将保存在 VS Code SecretStorage 中",
+    title: vscode.l10n.t("Set AI Model API Key"),
+    prompt: vscode.l10n.t("The API key is stored in VS Code SecretStorage."),
     password: true,
     ignoreFocusOut: true,
-    validateInput: (input) => (input.trim() ? undefined : "API Key 不能为空"),
+    validateInput: (input) => (input.trim() ? undefined : vscode.l10n.t("API key cannot be empty.")),
   });
   const apiKey = value?.trim();
   if (apiKey) {
@@ -148,7 +154,32 @@ async function promptForApiKey(context: vscode.ExtensionContext): Promise<string
 
 async function clearApiKey(context: vscode.ExtensionContext): Promise<void> {
   await context.secrets.delete(API_KEY_SECRET);
-  void vscode.window.showInformationMessage("AI Git Commit: API Key 已清除");
+  void vscode.window.showInformationMessage(`AI Git Commit: ${vscode.l10n.t("API key cleared.")}`);
+}
+
+function localizeError(error: unknown): string {
+  if (!(error instanceof ModelRequestError)) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  switch (error.code) {
+    case "empty-response":
+      return vscode.l10n.t("The model returned an empty commit message.");
+    case "invalid-response":
+      return vscode.l10n.t("The model API returned an invalid response.");
+    case "api-error":
+      return vscode.l10n.t("Model API error: {0}", error.details.detail ?? "");
+    case "invalid-stream":
+      return vscode.l10n.t("The model API returned an invalid streaming response.");
+    case "http-error":
+      return vscode.l10n.t(
+        "Model request failed (HTTP {0}): {1}",
+        error.details.status ?? 0,
+        error.details.detail ?? "",
+      );
+    case "timeout":
+      return vscode.l10n.t("Model request timed out after {0} seconds.", error.details.seconds ?? 0);
+  }
 }
 
 function requiredSetting(value: string | undefined, name: string): string {

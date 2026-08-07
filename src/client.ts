@@ -16,15 +16,56 @@ export interface CompletionOptions {
 
 export class RequestCancelledError extends Error {
   constructor() {
-    super("模型请求已取消");
+    super("Model request cancelled.");
     this.name = "RequestCancelledError";
   }
 }
 
 export class MissingSettingError extends Error {
   constructor(public readonly settingId: string) {
-    super(`请配置 ${settingId}`);
+    super(`Configure ${settingId}.`);
     this.name = "MissingSettingError";
+  }
+}
+
+export type ModelRequestErrorCode =
+  | "empty-response"
+  | "invalid-response"
+  | "api-error"
+  | "invalid-stream"
+  | "http-error"
+  | "timeout";
+
+export interface ModelRequestErrorDetails {
+  detail?: string;
+  status?: number;
+  seconds?: number;
+}
+
+export class ModelRequestError extends Error {
+  constructor(
+    public readonly code: ModelRequestErrorCode,
+    public readonly details: ModelRequestErrorDetails = {},
+  ) {
+    super(defaultModelRequestErrorMessage(code, details));
+    this.name = "ModelRequestError";
+  }
+}
+
+function defaultModelRequestErrorMessage(code: ModelRequestErrorCode, details: ModelRequestErrorDetails): string {
+  switch (code) {
+    case "empty-response":
+      return "The model returned an empty commit message.";
+    case "invalid-response":
+      return "The model API returned an invalid response.";
+    case "api-error":
+      return `Model API error: ${details.detail ?? ""}`;
+    case "invalid-stream":
+      return "The model API returned an invalid streaming response.";
+    case "http-error":
+      return `Model request failed (HTTP ${details.status ?? 0}): ${details.detail ?? ""}`;
+    case "timeout":
+      return `Model request timed out after ${details.seconds ?? 0} seconds.`;
   }
 }
 
@@ -123,7 +164,7 @@ export async function createCommitMessage(options: CompletionOptions): Promise<s
   const result = await requestCompletion(target.url, target.format, payload, options.apiKey, options.timeoutMs, options.cancellationToken, options.onUpdate);
   const trimmed = result.trim();
   if (!trimmed) {
-    throw new Error("模型没有返回提交消息");
+    throw new ModelRequestError("empty-response");
   }
   return trimmed;
 }
@@ -133,10 +174,10 @@ function parseNonStreamingResponse(text: string, format: ApiFormat): string {
   try {
     parsed = JSON.parse(text) as ChatCompletionResponse | ResponsesResponse;
   } catch {
-    throw new Error("模型接口返回了无法解析的响应");
+    throw new ModelRequestError("invalid-response");
   }
   if (parsed.error?.message) {
-    throw new Error(`模型接口错误：${parsed.error.message}`);
+    throw new ModelRequestError("api-error", { detail: parsed.error.message });
   }
   if (format === "chat-completions") {
     return contentToText((parsed as ChatCompletionResponse).choices?.[0]?.message?.content);
@@ -217,12 +258,12 @@ function requestCompletion(
         try {
           chunk = JSON.parse(data) as ChatCompletionChunk | ResponsesChunk;
         } catch {
-          finishReject(new Error("模型接口返回了无法解析的流式响应"));
+          finishReject(new ModelRequestError("invalid-stream"));
           req.destroy();
           return;
         }
         if (chunk.error?.message) {
-          finishReject(new Error(`模型接口错误：${chunk.error.message}`));
+          finishReject(new ModelRequestError("api-error", { detail: chunk.error.message }));
           req.destroy();
           return;
         }
@@ -281,7 +322,7 @@ function requestCompletion(
           } catch {
             // Keep the response excerpt for non-JSON errors.
           }
-          finishReject(new Error(`模型请求失败（HTTP ${status}）：${detail}`));
+          finishReject(new ModelRequestError("http-error", { status, detail }));
           return;
         }
         if (streamedContent) {
@@ -301,7 +342,7 @@ function requestCompletion(
     });
 
     req.setTimeout(timeoutMs, () => {
-      req.destroy(new Error(`模型请求超时（${Math.round(timeoutMs / 1000)} 秒）`));
+      req.destroy(new ModelRequestError("timeout", { seconds: Math.round(timeoutMs / 1000) }));
     });
     req.on("error", finishReject);
     cancellationSubscription = cancellationToken?.onCancellationRequested(() => {

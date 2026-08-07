@@ -1,0 +1,15 @@
+{
+  "extension.description": "Generate Git commit messages from staged changes using AI.",
+  "command.generate.title": "AI Git Commit: Generate Commit Message",
+  "command.cancel.title": "AI Git Commit: Cancel Generation",
+  "command.setApiKey.title": "AI Git Commit: Set API Key",
+  "command.clearApiKey.title": "AI Git Commit: Clear API Key",
+  "configuration.baseUrl.description": "OpenAI-compatible API URL. Root URLs and URLs ending in /v1 use /chat/completions automatically. You can also enter a complete /chat/completions, /responses, or custom third-party endpoint.",
+  "configuration.model.description": "Model name used to generate commit messages.",
+  "configuration.requireApiKey.description": "Whether an API key is required. Disable this for unauthenticated local services such as Ollama.",
+  "configuration.language.description": "Language used for generated commit messages.",
+  "configuration.useConventionalCommits.description": "Require generated messages to follow the Conventional Commits format.",
+  "configuration.customInstructions.description": "Additional commit-message instructions, for example: `Keep the subject under 50 characters`.",
+  "configuration.maxDiffCharacters.description": "Maximum number of staged diff characters sent to the model. Additional content is truncated.",
+  "configuration.requestTimeoutSeconds.description": "Model request timeout in seconds."
+}
