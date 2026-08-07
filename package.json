@@ -3,7 +3,7 @@
   "displayName": "AI Git Commit",
   "icon": "images/icon.png",
   "description": "根据 Git 暂存区变更调用 AI 自动生成提交消息。",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "willkwok",
   "license": "MIT",
   "repository": {
