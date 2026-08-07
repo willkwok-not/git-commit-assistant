@@ -1,6 +1,6 @@
 # AI Git Commit
 
-[简体中文] | [[English](README.md)]
+[简体中文] | [[English](README_EN.md)]
 
 根据 Git 暂存区变更调用 AI 生成提交消息，并自动填入 VS Code 源代码管理输入框。
 

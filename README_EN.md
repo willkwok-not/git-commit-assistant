@@ -1,6 +1,6 @@
 # AI Git Commit
 
-[[简体中文](README.zh-CN.md)] | [English]
+[[简体中文](README.md)] | [English]
 
 Generate commit messages from staged Git changes using AI, then place them directly in the VS Code Source Control input box.
 
