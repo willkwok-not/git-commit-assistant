@@ -1,4 +1,4 @@
-# AI Git Commit
+# Git Commit Assistant
 
 [简体中文] | [[English](README_EN.md)]
 
@@ -15,9 +15,9 @@
 
 ## 快速开始
 
-1. 打开 VS Code 设置，搜索 `AI Git Commit`
+1. 打开 VS Code 设置，搜索 `Git Commit Assistant`
 2. 填写 `Base Url` 和 `Model`
-3. 从命令面板运行 `AI Git Commit: 设置 API Key`
+3. 从命令面板运行 `Git Commit Assistant: 设置 API Key`
 4. 在 Git 面板暂存需要提交的文件
 5. 点击源代码管理标题栏的 ✨ 按钮
 6. 检查生成的提交消息后再提交
@@ -39,24 +39,24 @@
 
 ```json
 {
-  "aiGitCommit.baseUrl": "http://localhost:11434/v1",
-  "aiGitCommit.model": "qwen2.5-coder:7b",
-  "aiGitCommit.requireApiKey": false
+  "gitCommitAssistant.baseUrl": "http://localhost:11434/v1",
+  "gitCommitAssistant.model": "qwen2.5-coder:7b",
+  "gitCommitAssistant.requireApiKey": false
 }
 ```
 
 ## 配置
 
-| 设置                                 | 默认值     | 说明                                |
-| ------------------------------------ | ---------- | ----------------------------------- |
-| `aiGitCommit.baseUrl`                | 无         | OpenAI 兼容的基础地址或完整接口地址 |
-| `aiGitCommit.model`                  | 无         | 模型名称                            |
-| `aiGitCommit.requireApiKey`          | `true`     | 是否要求 API Key                    |
-| `aiGitCommit.language`               | `简体中文` | 提交消息语言                        |
-| `aiGitCommit.useConventionalCommits` | `true`     | 使用 Conventional Commits           |
-| `aiGitCommit.customInstructions`     | 空         | 额外生成规则                        |
-| `aiGitCommit.maxDiffCharacters`      | `30000`    | 最大发送字符数                      |
-| `aiGitCommit.requestTimeoutSeconds`  | `60`       | 请求超时秒数                        |
+| 设置                                 | 默认值    | 说明                                |
+| ------------------------------------ | --------- | ----------------------------------- |
+| `gitCommitAssistant.baseUrl`                | 无        | OpenAI 兼容的基础地址或完整接口地址 |
+| `gitCommitAssistant.model`                  | 无        | 模型名称                            |
+| `gitCommitAssistant.requireApiKey`          | `true`    | 是否要求 API Key                    |
+| `gitCommitAssistant.language`               | `English` | 提交消息语言                        |
+| `gitCommitAssistant.useConventionalCommits` | `true`    | 使用 Conventional Commits           |
+| `gitCommitAssistant.customInstructions`     | 空        | 额外生成规则                        |
+| `gitCommitAssistant.maxDiffCharacters`      | `30000`   | 最大发送字符数                      |
+| `gitCommitAssistant.requestTimeoutSeconds`  | `60`      | 请求超时秒数                        |
 
 ## 隐私说明
 

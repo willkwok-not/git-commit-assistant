@@ -13,7 +13,7 @@ test("createCommitMessage identifies a missing base URL setting", async () => {
       userPrompt: "user",
       timeoutMs: 1000,
     }),
-    (error: unknown) => error instanceof MissingSettingError && error.settingId === "aiGitCommit.baseUrl",
+    (error: unknown) => error instanceof MissingSettingError && error.settingId === "gitCommitAssistant.baseUrl",
   );
 });
 

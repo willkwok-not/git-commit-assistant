@@ -108,7 +108,7 @@ interface ResponsesChunk {
 function completionTarget(baseUrl: string): CompletionTarget {
   const normalized = baseUrl.trim();
   if (!normalized) {
-    throw new MissingSettingError("aiGitCommit.baseUrl");
+    throw new MissingSettingError("gitCommitAssistant.baseUrl");
   }
 
   const url = new URL(normalized);

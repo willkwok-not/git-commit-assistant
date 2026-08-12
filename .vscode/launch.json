@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "运行 AI Git Commit 扩展",
+      "name": "运行 Git Commit Assistant 扩展",
       "type": "extensionHost",
       "request": "launch",
       "args": [

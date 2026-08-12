@@ -1,4 +1,4 @@
-# AI Git Commit 开发文档
+# Git Commit Assistant 开发文档
 
 [简体中文] | [[English](README_DEV_EN.md)]
 
@@ -63,7 +63,7 @@ Chat Completions 使用 `messages` 请求体，并解析 `choices[].delta.conten
 - `l10n/bundle.l10n.zh-cn.json` 保存运行时简体中文翻译
 - 扩展宿主中的运行时文案使用 `vscode.l10n.t()`
 
-`aiGitCommit.language` 只控制生成的提交消息语言，与 VS Code 界面语言相互独立
+`gitCommitAssistant.language` 只控制生成的提交消息语言，与 VS Code 界面语言相互独立
 
 ## 测试
 

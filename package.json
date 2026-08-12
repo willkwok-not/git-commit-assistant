@@ -1,14 +1,14 @@
 {
-  "name": "ai-git-commit",
-  "displayName": "AI Git Commit",
+  "name": "git-commit-assistant",
+  "displayName": "Git Commit Assistant",
   "icon": "images/icon.png",
   "description": "%extension.description%",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "publisher": "willkwok",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/willkwok-not/ai-git-commit.git"
+    "url": "https://github.com/willkwok-not/git-commit-assistant.git"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -22,63 +22,63 @@
   "contributes": {
     "commands": [
       {
-        "command": "aiGitCommit.generate",
+        "command": "gitCommitAssistant.generate",
         "title": "%command.generate.title%",
         "icon": "$(sparkle)"
       },
       {
-        "command": "aiGitCommit.cancel",
+        "command": "gitCommitAssistant.cancel",
         "title": "%command.cancel.title%",
         "icon": "$(debug-stop)"
       },
       {
-        "command": "aiGitCommit.setApiKey",
+        "command": "gitCommitAssistant.setApiKey",
         "title": "%command.setApiKey.title%"
       },
       {
-        "command": "aiGitCommit.clearApiKey",
+        "command": "gitCommitAssistant.clearApiKey",
         "title": "%command.clearApiKey.title%"
       }
     ],
     "menus": {
       "scm/title": [
         {
-          "command": "aiGitCommit.generate",
-          "when": "scmProvider == git && !aiGitCommit.generating",
+          "command": "gitCommitAssistant.generate",
+          "when": "scmProvider == git && !gitCommitAssistant.generating",
           "group": "navigation"
         },
         {
-          "command": "aiGitCommit.cancel",
-          "when": "scmProvider == git && aiGitCommit.generating",
+          "command": "gitCommitAssistant.cancel",
+          "when": "scmProvider == git && gitCommitAssistant.generating",
           "group": "navigation"
         }
       ]
     },
     "configuration": {
-      "title": "AI Git Commit",
+      "title": "Git Commit Assistant",
       "properties": {
-        "aiGitCommit.baseUrl": {
+        "gitCommitAssistant.baseUrl": {
           "type": "string",
           "order": 1,
           "description": "%configuration.baseUrl.description%"
         },
-        "aiGitCommit.model": {
+        "gitCommitAssistant.model": {
           "type": "string",
           "order": 2,
           "description": "%configuration.model.description%"
         },
-        "aiGitCommit.requireApiKey": {
+        "gitCommitAssistant.requireApiKey": {
           "type": "boolean",
           "default": true,
           "order": 3,
           "description": "%configuration.requireApiKey.description%"
         },
-        "aiGitCommit.language": {
+        "gitCommitAssistant.language": {
           "type": "string",
           "enum": [
+            "English",
             "简体中文",
             "繁體中文",
-            "English",
             "日本語",
             "한국어",
             "Français",
@@ -92,27 +92,27 @@
           "order": 4,
           "description": "%configuration.language.description%"
         },
-        "aiGitCommit.useConventionalCommits": {
+        "gitCommitAssistant.useConventionalCommits": {
           "type": "boolean",
           "default": true,
           "order": 5,
           "description": "%configuration.useConventionalCommits.description%"
         },
-        "aiGitCommit.customInstructions": {
+        "gitCommitAssistant.customInstructions": {
           "type": "string",
           "default": "",
           "order": 6,
           "markdownDescription": "%configuration.customInstructions.description%"
         },
-        "aiGitCommit.maxDiffCharacters": {
+        "gitCommitAssistant.maxDiffCharacters": {
           "type": "number",
           "default": 30000,
           "minimum": 1000,
-          "maximum": 200000,
+          "maximum": 500000,
           "order": 7,
           "description": "%configuration.maxDiffCharacters.description%"
         },
-        "aiGitCommit.requestTimeoutSeconds": {
+        "gitCommitAssistant.requestTimeoutSeconds": {
           "type": "number",
           "default": 60,
           "minimum": 5,

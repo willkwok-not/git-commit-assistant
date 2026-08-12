@@ -3,22 +3,22 @@ import { createCommitMessage, MissingSettingError, ModelRequestError, RequestCan
 import { getRepository, getStagedDiff } from "./git";
 import { buildPrompt, cleanCommitMessage } from "./prompt";
 
-const API_KEY_SECRET = "aiGitCommit.apiKey";
+const API_KEY_SECRET = "gitCommitAssistant.apiKey";
 let activeGeneration: vscode.CancellationTokenSource | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand("aiGitCommit.generate", () => generate(context)),
-    vscode.commands.registerCommand("aiGitCommit.cancel", cancelGeneration),
-    vscode.commands.registerCommand("aiGitCommit.setApiKey", () => setApiKey(context)),
-    vscode.commands.registerCommand("aiGitCommit.clearApiKey", () => clearApiKey(context)),
+    vscode.commands.registerCommand("gitCommitAssistant.generate", () => generate(context)),
+    vscode.commands.registerCommand("gitCommitAssistant.cancel", cancelGeneration),
+    vscode.commands.registerCommand("gitCommitAssistant.setApiKey", () => setApiKey(context)),
+    vscode.commands.registerCommand("gitCommitAssistant.clearApiKey", () => clearApiKey(context)),
   );
-  void vscode.commands.executeCommand("setContext", "aiGitCommit.generating", false);
+  void vscode.commands.executeCommand("setContext", "gitCommitAssistant.generating", false);
 }
 
 async function generate(context: vscode.ExtensionContext): Promise<void> {
   if (activeGeneration) {
-    void vscode.window.showInformationMessage(`AI Git Commit: ${vscode.l10n.t("A generation task is already running.")}`);
+    void vscode.window.showInformationMessage(`Git Commit Assistant: ${vscode.l10n.t("A generation task is already running.")}`);
     return;
   }
 
@@ -26,12 +26,12 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
   let restoreStreamedInput: (() => void) | undefined;
   let completed = false;
   activeGeneration = cancellationSource;
-  await vscode.commands.executeCommand("setContext", "aiGitCommit.generating", true);
+  await vscode.commands.executeCommand("setContext", "gitCommitAssistant.generating", true);
   try {
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "AI Git Commit",
+        title: "Git Commit Assistant",
         cancellable: true,
       },
       async (progress, progressToken) => {
@@ -39,9 +39,9 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
           cancellationSource.cancel();
         });
         try {
-          const config = vscode.workspace.getConfiguration("aiGitCommit");
-          const baseUrl = requiredSetting(config.get<string>("baseUrl"), "aiGitCommit.baseUrl");
-          const model = requiredSetting(config.get<string>("model"), "aiGitCommit.model");
+          const config = vscode.workspace.getConfiguration("gitCommitAssistant");
+          const baseUrl = requiredSetting(config.get<string>("baseUrl"), "gitCommitAssistant.baseUrl");
+          const model = requiredSetting(config.get<string>("model"), "gitCommitAssistant.model");
           const repository = await getRepository();
           const originalInput = repository.inputBox.value;
           let latestStreamedInput: string | undefined;
@@ -104,7 +104,7 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
     if (error instanceof MissingSettingError) {
       const openSettings = vscode.l10n.t("Open Settings");
       const selection = await vscode.window.showErrorMessage(
-        `AI Git Commit: ${vscode.l10n.t("Configure {0}.", error.settingId)}`,
+        `Git Commit Assistant: ${vscode.l10n.t("Configure {0}.", error.settingId)}`,
         openSettings,
       );
       if (selection === openSettings) {
@@ -112,7 +112,7 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
       }
     } else if (!(error instanceof vscode.CancellationError) && !(error instanceof RequestCancelledError)) {
       const message = localizeError(error);
-      void vscode.window.showErrorMessage(`AI Git Commit: ${message}`);
+      void vscode.window.showErrorMessage(`Git Commit Assistant: ${message}`);
     }
   } finally {
     if (!completed) {
@@ -120,7 +120,7 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
     }
     if (activeGeneration === cancellationSource) {
       activeGeneration = undefined;
-      await vscode.commands.executeCommand("setContext", "aiGitCommit.generating", false);
+      await vscode.commands.executeCommand("setContext", "gitCommitAssistant.generating", false);
     }
     cancellationSource.dispose();
   }
@@ -133,7 +133,7 @@ function cancelGeneration(): void {
 async function setApiKey(context: vscode.ExtensionContext): Promise<void> {
   const apiKey = await promptForApiKey(context);
   if (apiKey) {
-    void vscode.window.showInformationMessage(`AI Git Commit: ${vscode.l10n.t("API key saved securely.")}`);
+    void vscode.window.showInformationMessage(`Git Commit Assistant: ${vscode.l10n.t("API key saved securely.")}`);
   }
 }
 
@@ -154,7 +154,7 @@ async function promptForApiKey(context: vscode.ExtensionContext): Promise<string
 
 async function clearApiKey(context: vscode.ExtensionContext): Promise<void> {
   await context.secrets.delete(API_KEY_SECRET);
-  void vscode.window.showInformationMessage(`AI Git Commit: ${vscode.l10n.t("API key cleared.")}`);
+  void vscode.window.showInformationMessage(`Git Commit Assistant: ${vscode.l10n.t("API key cleared.")}`);
 }
 
 function localizeError(error: unknown): string {

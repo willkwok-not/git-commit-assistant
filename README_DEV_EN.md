@@ -1,4 +1,4 @@
-# AI Git Commit Development Guide
+# Git Commit Assistant Development Guide
 
 [[简体中文](README_DEV.md)] | [English]
 
@@ -68,7 +68,7 @@ Chat Completions sends `messages` and parses `choices[].delta.content`. The Resp
 - `l10n/bundle.l10n.zh-cn.json` contains Simplified Chinese runtime translations.
 - Runtime strings in extension-host code use `vscode.l10n.t()`.
 
-The `aiGitCommit.language` setting controls generated commit messages and is independent of the VS Code display language.
+The `gitCommitAssistant.language` setting controls generated commit messages and is independent of the VS Code display language.
 
 ## Testing
 
