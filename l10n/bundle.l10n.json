@@ -7,7 +7,6 @@
   "Configure {0}.": "Configure {0}.",
   "API key saved securely.": "API key saved securely.",
   "Set AI Model API Key": "Set AI Model API Key",
-  "The API key is stored in VS Code SecretStorage.": "The API key is stored in VS Code SecretStorage.",
   "API key cannot be empty.": "API key cannot be empty.",
   "API key cleared.": "API key cleared.",
   "The model API returned an invalid response.": "The model API returned an invalid response.",

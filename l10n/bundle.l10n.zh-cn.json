@@ -7,7 +7,6 @@
   "Configure {0}.": "请配置 {0}",
   "API key saved securely.": "API Key 已安全保存",
   "Set AI Model API Key": "设置 AI 模型 API Key",
-  "The API key is stored in VS Code SecretStorage.": "API Key 将保存在 VS Code SecretStorage 中",
   "API key cannot be empty.": "API Key 不能为空",
   "API key cleared.": "API Key 已清除",
   "The model API returned an invalid response.": "模型接口返回了无法解析的响应",

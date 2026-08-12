@@ -138,9 +138,10 @@ async function setApiKey(context: vscode.ExtensionContext): Promise<void> {
 }
 
 async function promptForApiKey(context: vscode.ExtensionContext): Promise<string | undefined> {
+  const title = vscode.l10n.t("Set AI Model API Key");
   const value = await vscode.window.showInputBox({
-    title: vscode.l10n.t("Set AI Model API Key"),
-    prompt: vscode.l10n.t("The API key is stored in VS Code SecretStorage."),
+    title,
+    prompt: title,
     password: true,
     ignoreFocusOut: true,
     validateInput: (input) => (input.trim() ? undefined : vscode.l10n.t("API key cannot be empty.")),
