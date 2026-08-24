@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { createCommitMessage, MissingSettingError, ModelRequestError, RequestCancelledError } from "./client";
 import { getRepository, getStagedDiff } from "./git";
 import { buildPrompt, cleanCommitMessage } from "./prompt";
+import { registerCodeCompletionProvider } from "./codeCompletion";
 
 const API_KEY_SECRET = "gitCommitAssistant.apiKey";
 let activeGeneration: vscode.CancellationTokenSource | undefined;
@@ -12,8 +13,52 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("gitCommitAssistant.cancel", cancelGeneration),
     vscode.commands.registerCommand("gitCommitAssistant.setApiKey", () => setApiKey(context)),
     vscode.commands.registerCommand("gitCommitAssistant.clearApiKey", () => clearApiKey(context)),
+    vscode.commands.registerCommand("gitCommitAssistant.triggerCodeCompletion", () => triggerCodeCompletion(context)),
+    registerCodeCompletionProvider(context),
   );
   void vscode.commands.executeCommand("setContext", "gitCommitAssistant.generating", false);
+}
+
+async function triggerCodeCompletion(context: vscode.ExtensionContext): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+  const config = vscode.workspace.getConfiguration("gitCommitAssistant", editor.document.uri);
+  if (!config.get<boolean>("codeCompletion.enabled", false)) {
+    await showOpenSettingsMessage(
+      vscode.l10n.t("Enable code completion before requesting a suggestion."),
+      "gitCommitAssistant.codeCompletion.enabled",
+      false,
+    );
+    return;
+  }
+  const excludedLanguages = config.get<string[]>("codeCompletion.excludedLanguages", []);
+  if (excludedLanguages.includes(editor.document.languageId)) {
+    await showOpenSettingsMessage(
+      vscode.l10n.t("Code completion is disabled for the {0} language.", editor.document.languageId),
+      "gitCommitAssistant.codeCompletion.excludedLanguages",
+      false,
+    );
+    return;
+  }
+  try {
+    requiredSetting(config.get<string>("baseUrl"), "gitCommitAssistant.baseUrl");
+    requiredSetting(config.get<string>("model"), "gitCommitAssistant.model");
+  } catch (error) {
+    if (error instanceof MissingSettingError) {
+      await showMissingSetting(error, error.settingId);
+      return;
+    }
+    throw error;
+  }
+  if (config.get<boolean>("requireApiKey", true) && !(await context.secrets.get(API_KEY_SECRET))) {
+    const apiKey = await promptForApiKey(context);
+    if (!apiKey) {
+      return;
+    }
+  }
+  await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
 }
 
 async function generate(context: vscode.ExtensionContext): Promise<void> {
@@ -80,6 +125,8 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
             systemPrompt: prompt.system,
             userPrompt: prompt.user,
             timeoutMs: config.get<number>("requestTimeoutSeconds", 60) * 1000,
+            disableThinking: config.get<boolean>("disableThinking", true),
+            modelProvider: config.get("modelProvider", "auto"),
             cancellationToken: cancellationSource.token,
             onUpdate: (partialMessage) => {
               const visibleMessage = cleanCommitMessage(partialMessage);
@@ -102,14 +149,7 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
     );
   } catch (error) {
     if (error instanceof MissingSettingError) {
-      const openSettings = vscode.l10n.t("Open Settings");
-      const selection = await vscode.window.showErrorMessage(
-        `Git Commit Assistant: ${vscode.l10n.t("Configure {0}.", error.settingId)}`,
-        openSettings,
-      );
-      if (selection === openSettings) {
-        await vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${context.extension.id}`);
-      }
+      await showMissingSetting(error, `@ext:${context.extension.id}`);
     } else if (!(error instanceof vscode.CancellationError) && !(error instanceof RequestCancelledError)) {
       const message = localizeError(error);
       void vscode.window.showErrorMessage(`Git Commit Assistant: ${message}`);
@@ -123,6 +163,21 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
       await vscode.commands.executeCommand("setContext", "gitCommitAssistant.generating", false);
     }
     cancellationSource.dispose();
+  }
+}
+
+async function showMissingSetting(error: MissingSettingError, settingsQuery: string): Promise<void> {
+  await showOpenSettingsMessage(vscode.l10n.t("Configure {0}.", error.settingId), settingsQuery, true);
+}
+
+async function showOpenSettingsMessage(message: string, settingsQuery: string, isError: boolean): Promise<void> {
+  const openSettings = vscode.l10n.t("Open Settings");
+  const fullMessage = `Git Commit Assistant: ${message}`;
+  const selection = isError
+    ? await vscode.window.showErrorMessage(fullMessage, openSettings)
+    : await vscode.window.showInformationMessage(fullMessage, openSettings);
+  if (selection === openSettings) {
+    await vscode.commands.executeCommand("workbench.action.openSettings", settingsQuery);
   }
 }
 

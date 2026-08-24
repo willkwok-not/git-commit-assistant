@@ -4,12 +4,21 @@
   "command.cancel.title": "Git Commit Assistant: Cancel Generation",
   "command.setApiKey.title": "Git Commit Assistant: Set API Key",
   "command.clearApiKey.title": "Git Commit Assistant: Clear API Key",
+  "command.triggerCodeCompletion.title": "Git Commit Assistant: Trigger Code Completion",
   "configuration.baseUrl.description": "OpenAI-compatible API URL. Root URLs and URLs ending in /v1 use /chat/completions automatically. You can also enter a complete /chat/completions, /responses, or custom third-party endpoint.",
   "configuration.model.description": "Model name used to generate commit messages.",
+  "configuration.modelProvider.description": "Model API provider. Auto detects official URLs and common model names; select a provider when using a proxy or custom endpoint.",
   "configuration.requireApiKey.description": "Whether an API key is required. Disable this for unauthenticated local services such as Ollama.",
   "configuration.language.description": "Language used for generated commit messages.",
   "configuration.useConventionalCommits.description": "Require generated messages to follow the Conventional Commits format.",
   "configuration.customInstructions.description": "Additional commit-message instructions, for example: `Keep the subject under 50 characters`.",
   "configuration.maxDiffCharacters.description": "Maximum number of staged diff characters sent to the model. Additional content is truncated.",
-  "configuration.requestTimeoutSeconds.description": "Model request timeout in seconds."
+  "configuration.requestTimeoutSeconds.description": "Model request timeout in seconds.",
+  "configuration.disableThinking.description": "Explicitly request non-thinking mode for commit messages and code completion using the selected provider's parameter. Models that require thinking may reject the request.",
+  "configuration.codeCompletion.enabled.description": "Enable AI inline code completion. The current file context is sent to the configured model service after you pause typing.",
+  "configuration.codeCompletion.debounceMilliseconds.description": "Delay after typing stops before requesting an automatic code completion (milliseconds).",
+  "configuration.codeCompletion.maxContextCharacters.description": "Maximum number of current-file characters sent for each code completion.",
+  "configuration.codeCompletion.maxLines.description": "Maximum displayed lines for each code completion.",
+  "configuration.codeCompletion.customInstructions.description": "Additional code-completion rules, for example: `Prefer early returns`.",
+  "configuration.codeCompletion.excludedLanguages.description": "VS Code language IDs excluded from automatic code completion."
 }

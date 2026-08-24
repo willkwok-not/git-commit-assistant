@@ -24,6 +24,15 @@ npm run compile
 
 Open the project in VS Code and press `F5` to launch the Extension Development Host.
 
+The development workspace enables code completion in `.vscode/settings.json`. In the new Extension Development Host:
+
+1. Configure `Base Url`, `Model`, and the API key.
+2. Open a TypeScript file under `src/` (Markdown is excluded by default).
+3. Type and pause for about 200 milliseconds, or press `Ctrl+Alt+\` to trigger completion explicitly.
+4. If no suggestion appears, select `Git Commit Assistant` under **View → Output** to see why it was skipped or failed.
+
+The `Git Commit Assistant` output channel, request notification, full prompts, and raw model responses are enabled only in the development mode launched with `F5`. An installed VSIX does not create this debug output channel or display the code-completion request notification.
+
 For incremental compilation:
 
 ```bash
@@ -36,6 +45,8 @@ npm run watch
 src/
 ├── extension.ts       Activation, commands, settings, and user interaction
 ├── client.ts          OpenAI-compatible requests and streaming parsers
+├── codeCompletion.ts  VS Code inline completion provider, debounce, cache, and snippet construction
+├── completionPrompt.ts Code-completion context, prompts, result cleanup, and structural post-processing
 ├── git.ts             Repository selection and staged diff access
 ├── prompt.ts          Prompt construction and commit message cleanup
 └── test/              Node.js unit tests
@@ -78,8 +89,8 @@ Run compilation and all tests:
 npm test
 ```
 
-Tests cover prompt truncation, message cleanup, Chat Completions streaming, custom endpoints, Responses API streaming and
-non-streaming responses, and missing-setting errors.
+Tests cover prompt truncation, message cleanup, code-completion context, result limits, structural pairing and indentation,
+Chat Completions streaming, custom endpoints, Responses API streaming and non-streaming responses, and missing-setting errors.
 
 ## Packaging
 

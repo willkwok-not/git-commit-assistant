@@ -2,7 +2,60 @@ import assert from "node:assert/strict";
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
-import { createCommitMessage, MissingSettingError } from "../client";
+import {
+  createCommitMessage,
+  createTextCompletion,
+  detectModelProvider,
+  disabledThinkingParameters,
+  MissingSettingError,
+} from "../client";
+
+test("detectModelProvider prioritizes the API service over the model family", () => {
+  assert.equal(detectModelProvider("https://openrouter.ai/api/v1", "qwen3-coder"), "openrouter");
+  assert.equal(detectModelProvider("http://localhost:11434/v1", "deepseek-r1"), "ollama");
+  assert.equal(detectModelProvider("https://proxy.example/v1", "gemini-2.5-flash"), "gemini");
+  assert.equal(detectModelProvider("https://proxy.example/v1", "unknown-model"), undefined);
+});
+
+test("disabledThinkingParameters uses provider-specific fields", () => {
+  const cases = [
+    ["gemini", { reasoning_effort: "none" }],
+    ["ollama", { reasoning_effort: "none" }],
+    ["openrouter", { reasoning: { effort: "none" } }],
+    ["qwen", { enable_thinking: false }],
+    ["deepseek", { thinking: { type: "disabled" } }],
+    ["kimi", { thinking: { type: "disabled" } }],
+    ["glm", { thinking: { type: "disabled" } }],
+    ["mimo", { thinking: { type: "disabled" } }],
+  ] as const;
+
+  for (const [provider, expected] of cases) {
+    assert.deepEqual(
+      disabledThinkingParameters("https://proxy.example/v1", "test-model", "chat-completions", provider),
+      expected,
+    );
+  }
+  assert.deepEqual(
+    disabledThinkingParameters("https://api.openai.com/v1", "gpt-5.4", "chat-completions", "openai"),
+    { reasoning_effort: "none" },
+  );
+  assert.deepEqual(
+    disabledThinkingParameters("https://api.openai.com/v1", "gpt-4.1", "chat-completions", "openai"),
+    {},
+  );
+  assert.deepEqual(
+    disabledThinkingParameters("https://proxy.example/v1", "claude-sonnet-5", "chat-completions", "claude"),
+    { thinking: { type: "disabled" } },
+  );
+  assert.deepEqual(
+    disabledThinkingParameters("https://proxy.example/v1", "claude-sonnet-4-6", "chat-completions", "claude"),
+    {},
+  );
+  assert.deepEqual(
+    disabledThinkingParameters("https://api.openai.com/v1/responses", "gpt-5.4", "responses", "openai"),
+    { reasoning: { effort: "none" } },
+  );
+});
 
 test("createCommitMessage identifies a missing base URL setting", async () => {
   await assert.rejects(
@@ -37,6 +90,7 @@ test("createCommitMessage emits accumulated SSE updates", async () => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const port = (server.address() as AddressInfo).port;
   const updates: string[] = [];
+  let rawResponse = "";
 
   try {
     const result = await createCommitMessage({
@@ -45,13 +99,21 @@ test("createCommitMessage emits accumulated SSE updates", async () => {
       systemPrompt: "system",
       userPrompt: "user",
       timeoutMs: 1000,
+      disableThinking: true,
+      modelProvider: "deepseek",
       onUpdate: (content) => updates.push(content),
+      onRawResponse: (content) => {
+        rawResponse = content;
+      },
     });
 
     assert.equal(result, "feat: 支持流式输出");
     assert.deepEqual(updates, ["feat: ", "feat: 支持流式输出"]);
     assert.equal(requestPath, "/v1/chat/completions");
     assert.equal(JSON.parse(requestBody).stream, true);
+    assert.equal(JSON.parse(requestBody).max_tokens, undefined);
+    assert.deepEqual(JSON.parse(requestBody).thinking, { type: "disabled" });
+    assert.match(rawResponse, /feat:/);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
@@ -102,6 +164,30 @@ test("createCommitMessage requests a custom Chat Completions endpoint unchanged"
   }
 });
 
+test("createTextCompletion accepts an intentionally empty streamed completion", async () => {
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { "Content-Type": "text/event-stream" });
+    response.end("data: [DONE]\n\n");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+
+  try {
+    const result = await createTextCompletion({
+      baseUrl: `http://127.0.0.1:${port}/v1`,
+      model: "test-model",
+      systemPrompt: "system",
+      userPrompt: "user",
+      timeoutMs: 1000,
+    });
+    assert.equal(result, "");
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+});
+
 test("createCommitMessage supports the Responses API and its SSE events", async () => {
   let requestPath = "";
   let requestBody = "";
@@ -128,10 +214,12 @@ test("createCommitMessage supports the Responses API and its SSE events", async 
   try {
     const result = await createCommitMessage({
       baseUrl: `http://127.0.0.1:${port}/v1/responses`,
-      model: "test-model",
+      model: "gpt-5.4",
       systemPrompt: "system",
       userPrompt: "user",
       timeoutMs: 1000,
+      disableThinking: true,
+      modelProvider: "openai",
       onUpdate: (content) => updates.push(content),
     });
 
@@ -142,6 +230,8 @@ test("createCommitMessage supports the Responses API and its SSE events", async 
     assert.equal(body.instructions, "system");
     assert.equal(body.input, "user");
     assert.equal(body.stream, true);
+    assert.equal(body.max_output_tokens, undefined);
+    assert.deepEqual(body.reasoning, { effort: "none" });
     assert.equal(body.messages, undefined);
   } finally {
     await new Promise<void>((resolve, reject) => {

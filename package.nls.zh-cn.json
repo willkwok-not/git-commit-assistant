@@ -4,12 +4,21 @@
   "command.cancel.title": "Git Commit Assistant: 取消生成",
   "command.setApiKey.title": "Git Commit Assistant: 设置 API Key",
   "command.clearApiKey.title": "Git Commit Assistant: 清除 API Key",
+  "command.triggerCodeCompletion.title": "Git Commit Assistant: 触发代码补全",
   "configuration.baseUrl.description": "OpenAI 兼容接口地址。根地址或以 /v1 结尾时自动使用 /chat/completions；也可填写完整的 /chat/completions、/responses 或第三方自定义接口地址。",
   "configuration.model.description": "用于生成提交消息的模型名称。",
+  "configuration.modelProvider.description": "模型 API 服务商。自动模式会识别官方地址和常见模型名；使用中转或自定义接口时请手动选择。",
   "configuration.requireApiKey.description": "是否要求 API Key。使用 Ollama 等本地无鉴权服务时可关闭。",
   "configuration.language.description": "提交消息使用的语言。",
   "configuration.useConventionalCommits.description": "要求生成 Conventional Commits 格式的消息。",
   "configuration.customInstructions.description": "附加给模型的提交消息规则，例如：`主题不超过 50 个字符`。",
   "configuration.maxDiffCharacters.description": "发送给模型的暂存区 diff 最大字符数。超出部分会被截断。",
-  "configuration.requestTimeoutSeconds.description": "模型请求超时时间（秒）。"
+  "configuration.requestTimeoutSeconds.description": "模型请求超时时间（秒）。",
+  "configuration.disableThinking.description": "使用所选服务商的参数明确请求禁用思考模式，应用于提交消息和代码补全。必须思考的模型可能会拒绝请求。",
+  "configuration.codeCompletion.enabled.description": "启用 AI 行内代码补全。停止输入后，当前文件上下文会发送到已配置的模型服务。",
+  "configuration.codeCompletion.debounceMilliseconds.description": "停止输入后等待多久再请求自动代码补全（毫秒）。",
+  "configuration.codeCompletion.maxContextCharacters.description": "每次代码补全最多发送的当前文件字符数。",
+  "configuration.codeCompletion.maxLines.description": "每次代码补全最多显示的行数。",
+  "configuration.codeCompletion.customInstructions.description": "附加代码补全规则，例如：`优先使用提前返回`。",
+  "configuration.codeCompletion.excludedLanguages.description": "不启用自动代码补全的 VS Code 语言 ID。"
 }

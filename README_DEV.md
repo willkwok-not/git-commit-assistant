@@ -23,6 +23,15 @@ npm run compile
 
 在 VS Code 中打开项目，按 `F5` 启动 Extension Development Host
 
+开发工作区通过 `.vscode/settings.json` 默认启用代码补全。在新打开的 Extension Development Host 中：
+
+1. 配置 `Base Url`、`Model` 和 API Key
+2. 打开 `src/` 下的 TypeScript 文件（Markdown 默认不补全）
+3. 输入代码并等待约 200 毫秒，或按 `Ctrl+Alt+\` 主动触发
+4. 若没有出现建议，从“视图 → 输出”选择 `Git Commit Assistant` 查看跳过或请求失败原因
+
+`Git Commit Assistant` 输出频道、请求提示、完整提示词和模型原始响应只在按 `F5` 启动的开发模式中启用。安装打包后的 VSIX 时不会创建该调试输出频道，也不会显示“正在请求代码补全”通知。
+
 开发期间可以运行增量编译：
 
 ```bash
@@ -35,6 +44,8 @@ npm run watch
 src/
 ├── extension.ts       扩展激活、命令注册、配置和交互流程
 ├── client.ts          OpenAI 兼容请求及流式响应解析
+├── codeCompletion.ts  VS Code 行内补全提供器、防抖、缓存和 Snippet 生成
+├── completionPrompt.ts 代码补全上下文、提示词、结果清理和结构后处理
 ├── git.ts             Git 仓库选择和暂存区 diff 读取
 ├── prompt.ts          提示词构建和提交消息清理
 └── test/              Node.js 单元测试
@@ -73,7 +84,7 @@ Chat Completions 使用 `messages` 请求体，并解析 `choices[].delta.conten
 npm test
 ```
 
-当前测试覆盖提示词截断、提交消息清理、Chat Completions 流式输出、自定义接口地址、Responses API 流式与非流式响应，以及缺少配置时的错误类型
+当前测试覆盖提示词截断、提交消息清理、代码补全上下文、结果限制、结构配对和缩进处理、Chat Completions 流式输出、自定义接口地址、Responses API 流式与非流式响应，以及缺少配置时的错误类型
 
 ## 打包
 

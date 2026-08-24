@@ -3,7 +3,7 @@
   "displayName": "Git Commit Assistant",
   "icon": "images/icon.png",
   "description": "%extension.description%",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "publisher": "willkwok",
   "license": "MIT",
   "repository": {
@@ -16,6 +16,9 @@
   "categories": [
     "SCM Providers",
     "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "l10n": "./l10n",
@@ -38,6 +41,19 @@
       {
         "command": "gitCommitAssistant.clearApiKey",
         "title": "%command.clearApiKey.title%"
+      },
+      {
+        "command": "gitCommitAssistant.triggerCodeCompletion",
+        "title": "%command.triggerCodeCompletion.title%",
+        "icon": "$(sparkle)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "gitCommitAssistant.triggerCodeCompletion",
+        "key": "ctrl+alt+\\",
+        "mac": "cmd+alt+\\",
+        "when": "editorTextFocus && !editorReadonly"
       }
     ],
     "menus": {
@@ -57,20 +73,45 @@
     "configuration": {
       "title": "Git Commit Assistant",
       "properties": {
+        "gitCommitAssistant.codeCompletion.enabled": {
+          "type": "boolean",
+          "default": false,
+          "order": 1,
+          "description": "%configuration.codeCompletion.enabled.description%"
+        },
         "gitCommitAssistant.baseUrl": {
           "type": "string",
-          "order": 1,
+          "order": 2,
           "description": "%configuration.baseUrl.description%"
         },
         "gitCommitAssistant.model": {
           "type": "string",
-          "order": 2,
+          "order": 3,
           "description": "%configuration.model.description%"
+        },
+        "gitCommitAssistant.modelProvider": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "openai",
+            "claude",
+            "gemini",
+            "deepseek",
+            "qwen",
+            "kimi",
+            "glm",
+            "mimo",
+            "ollama",
+            "openrouter"
+          ],
+          "default": "auto",
+          "order": 4,
+          "description": "%configuration.modelProvider.description%"
         },
         "gitCommitAssistant.requireApiKey": {
           "type": "boolean",
           "default": true,
-          "order": 3,
+          "order": 5,
           "description": "%configuration.requireApiKey.description%"
         },
         "gitCommitAssistant.language": {
@@ -89,35 +130,86 @@
             "Русский"
           ],
           "default": "English",
-          "order": 4,
+          "order": 6,
           "description": "%configuration.language.description%"
         },
         "gitCommitAssistant.useConventionalCommits": {
           "type": "boolean",
           "default": true,
-          "order": 5,
+          "order": 7,
           "description": "%configuration.useConventionalCommits.description%"
         },
-        "gitCommitAssistant.customInstructions": {
-          "type": "string",
-          "default": "",
-          "order": 6,
-          "markdownDescription": "%configuration.customInstructions.description%"
+        "gitCommitAssistant.disableThinking": {
+          "type": "boolean",
+          "default": true,
+          "order": 8,
+          "description": "%configuration.disableThinking.description%"
         },
         "gitCommitAssistant.maxDiffCharacters": {
           "type": "number",
           "default": 30000,
           "minimum": 1000,
           "maximum": 500000,
-          "order": 7,
+          "order": 9,
           "description": "%configuration.maxDiffCharacters.description%"
+        },
+        "gitCommitAssistant.codeCompletion.maxContextCharacters": {
+          "type": "number",
+          "default": 4000,
+          "minimum": 1000,
+          "maximum": 100000,
+          "order": 10,
+          "description": "%configuration.codeCompletion.maxContextCharacters.description%"
+        },
+        "gitCommitAssistant.codeCompletion.maxLines": {
+          "type": "number",
+          "default": 16,
+          "minimum": 1,
+          "maximum": 50,
+          "order": 11,
+          "description": "%configuration.codeCompletion.maxLines.description%"
+        },
+        "gitCommitAssistant.customInstructions": {
+          "type": "string",
+          "default": "",
+          "order": 12,
+          "markdownDescription": "%configuration.customInstructions.description%"
+        },
+        "gitCommitAssistant.codeCompletion.customInstructions": {
+          "type": "string",
+          "default": "",
+          "order": 13,
+          "markdownDescription": "%configuration.codeCompletion.customInstructions.description%"
+        },
+        "gitCommitAssistant.codeCompletion.excludedLanguages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "plaintext",
+            "markdown",
+            "scminput",
+            "git-commit"
+          ],
+          "uniqueItems": true,
+          "order": 14,
+          "description": "%configuration.codeCompletion.excludedLanguages.description%"
+        },
+        "gitCommitAssistant.codeCompletion.debounceMilliseconds": {
+          "type": "number",
+          "default": 200,
+          "minimum": 100,
+          "maximum": 5000,
+          "order": 15,
+          "description": "%configuration.codeCompletion.debounceMilliseconds.description%"
         },
         "gitCommitAssistant.requestTimeoutSeconds": {
           "type": "number",
           "default": 60,
           "minimum": 5,
           "maximum": 300,
-          "order": 8,
+          "order": 16,
           "description": "%configuration.requestTimeoutSeconds.description%"
         }
       }
@@ -127,7 +219,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test out/test/prompt.test.js out/test/client.test.js out/test/localization.test.js",
+    "test": "npm run compile && node --test out/test/*.test.js",
     "package": "npx @vscode/vsce package"
   },
   "devDependencies": {

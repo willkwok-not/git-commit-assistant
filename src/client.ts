@@ -12,7 +12,23 @@ export interface CompletionOptions {
   timeoutMs: number;
   cancellationToken?: CancellationToken;
   onUpdate?: (content: string) => void;
+  onRawResponse?: (content: string) => void;
+  disableThinking?: boolean;
+  modelProvider?: ModelProvider;
 }
+
+export type ModelProvider =
+  | "auto"
+  | "openai"
+  | "claude"
+  | "gemini"
+  | "deepseek"
+  | "qwen"
+  | "kimi"
+  | "glm"
+  | "mimo"
+  | "ollama"
+  | "openrouter";
 
 export class RequestCancelledError extends Error {
   constructor() {
@@ -75,6 +91,85 @@ type ApiFormat = "chat-completions" | "responses";
 interface CompletionTarget {
   url: URL;
   format: ApiFormat;
+}
+
+type RequestPayload = Record<string, unknown>;
+
+export function detectModelProvider(baseUrl: string, model: string): Exclude<ModelProvider, "auto"> | undefined {
+  const url = new URL(baseUrl.trim());
+  const host = url.hostname.toLowerCase();
+  const normalizedModel = model.trim().toLowerCase();
+
+  if (host.includes("openrouter.ai")) return "openrouter";
+  if (host.includes("api.openai.com")) return "openai";
+  if (host.includes("anthropic.com")) return "claude";
+  if (host.includes("generativelanguage.googleapis.com")) return "gemini";
+  if (host.includes("deepseek.com")) return "deepseek";
+  if (host.includes("dashscope") || host.includes("aliyuncs.com")) return "qwen";
+  if (host.includes("moonshot") || host.includes("kimi")) return "kimi";
+  if (host.includes("bigmodel.cn") || host.includes("zhipu")) return "glm";
+  if (host.includes("mimo.mi.com")) return "mimo";
+  if (host.includes("ollama") || url.port === "11434") return "ollama";
+
+  if (/^(claude|anthropic[./-])/.test(normalizedModel)) return "claude";
+  if (/^gemini[./-]/.test(normalizedModel)) return "gemini";
+  if (/^deepseek[./-]/.test(normalizedModel)) return "deepseek";
+  if (/^qwen[./:-]/.test(normalizedModel)) return "qwen";
+  if (/^(kimi|moonshot)[./:-]/.test(normalizedModel)) return "kimi";
+  if (/^(glm|chatglm)[./:-]/.test(normalizedModel)) return "glm";
+  if (/^(mimo|xiaomi[./-])/.test(normalizedModel)) return "mimo";
+  if (/^(gpt-|o\d|codex)/.test(normalizedModel)) return "openai";
+  return undefined;
+}
+
+/** Provider-specific request fields that explicitly request non-thinking mode. */
+export function disabledThinkingParameters(
+  baseUrl: string,
+  model: string,
+  format: ApiFormat,
+  configuredProvider: ModelProvider = "auto",
+): RequestPayload {
+  const provider =
+    configuredProvider === "auto" ? detectModelProvider(baseUrl, model) : configuredProvider;
+
+  switch (provider) {
+    case "openai": {
+      const normalizedModel = model.trim().toLowerCase();
+      // Non-reasoning OpenAI models are already in non-thinking mode and may
+      // reject a reasoning field they do not support.
+      if (!/^gpt-5(?:\.|-|$)/.test(normalizedModel) && !/^o\d/.test(normalizedModel)) {
+        return {};
+      }
+      return format === "responses"
+        ? { reasoning: { effort: "none" } }
+        : { reasoning_effort: "none" };
+    }
+    case "gemini":
+    case "ollama":
+      return format === "responses"
+        ? { reasoning: { effort: "none" } }
+        : { reasoning_effort: "none" };
+    case "openrouter":
+      return { reasoning: { effort: "none" } };
+    case "qwen":
+      return { enable_thinking: false };
+    case "claude": {
+      const normalizedModel = model.trim().toLowerCase();
+      // Claude 4.x and earlier only think when thinking is explicitly enabled.
+      // Claude 5 introduced models whose default can require an explicit off.
+      return /(?:claude[-/.])?(?:opus|sonnet)[-/.]?5(?:\D|$)/.test(normalizedModel) ||
+        /(?:claude[-/.])?(?:fable|mythos)[-/.]?5?(?:\D|$)/.test(normalizedModel)
+        ? { thinking: { type: "disabled" } }
+        : {};
+    }
+    case "deepseek":
+    case "kimi":
+    case "glm":
+    case "mimo":
+      return { thinking: { type: "disabled" } };
+    default:
+      return {};
+  }
 }
 
 interface ChatCompletionResponse {
@@ -141,7 +236,19 @@ function contentToText(content: ChatContent | undefined): string {
 }
 
 export async function createCommitMessage(options: CompletionOptions): Promise<string> {
+  const result = (await createTextCompletion(options)).trim();
+  if (!result) {
+    throw new ModelRequestError("empty-response");
+  }
+  return result;
+}
+
+/** Generate text while preserving leading and trailing whitespace for code completions. */
+export async function createTextCompletion(options: CompletionOptions): Promise<string> {
   const target = completionTarget(options.baseUrl);
+  const thinkingParameters = options.disableThinking
+    ? disabledThinkingParameters(options.baseUrl, options.model, target.format, options.modelProvider)
+    : {};
   const payload = JSON.stringify(
     target.format === "responses"
       ? {
@@ -149,6 +256,7 @@ export async function createCommitMessage(options: CompletionOptions): Promise<s
           instructions: options.systemPrompt,
           input: options.userPrompt,
           stream: true,
+          ...thinkingParameters,
         }
       : {
           model: options.model,
@@ -158,15 +266,21 @@ export async function createCommitMessage(options: CompletionOptions): Promise<s
           ],
           temperature: 0.2,
           stream: true,
+          ...thinkingParameters,
         },
   );
 
-  const result = await requestCompletion(target.url, target.format, payload, options.apiKey, options.timeoutMs, options.cancellationToken, options.onUpdate);
-  const trimmed = result.trim();
-  if (!trimmed) {
-    throw new ModelRequestError("empty-response");
-  }
-  return trimmed;
+  const result = await requestCompletion(
+    target.url,
+    target.format,
+    payload,
+    options.apiKey,
+    options.timeoutMs,
+    options.cancellationToken,
+    options.onUpdate,
+    options.onRawResponse,
+  );
+  return result;
 }
 
 function parseNonStreamingResponse(text: string, format: ApiFormat): string {
@@ -203,6 +317,7 @@ function requestCompletion(
   timeoutMs: number,
   cancellationToken?: CancellationToken,
   onUpdate?: (content: string) => void,
+  onRawResponse?: (content: string) => void,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     if (cancellationToken?.isCancellationRequested) {
@@ -243,12 +358,14 @@ function requestCompletion(
       let rawResponse = "";
       let lineBuffer = "";
       let streamedContent = "";
+      let sawServerSentEvent = false;
 
       const consumeLine = (line: string): void => {
         const normalized = line.replace(/\r$/, "");
         if (!normalized.startsWith("data:")) {
           return;
         }
+        sawServerSentEvent = true;
         const data = normalized.slice(5).trim();
         if (!data || data === "[DONE]") {
           return;
@@ -314,6 +431,12 @@ function requestCompletion(
         if (settled) {
           return;
         }
+        try {
+          onRawResponse?.(rawResponse);
+        } catch (error) {
+          finishReject(error instanceof Error ? error : new Error(String(error)));
+          return;
+        }
         if (!successful) {
           let detail = rawResponse.slice(0, 500);
           try {
@@ -325,7 +448,7 @@ function requestCompletion(
           finishReject(new ModelRequestError("http-error", { status, detail }));
           return;
         }
-        if (streamedContent) {
+        if (streamedContent || sawServerSentEvent) {
           finishResolve(streamedContent);
           return;
         }

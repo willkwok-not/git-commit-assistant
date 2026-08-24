@@ -28,7 +28,7 @@ test("manifest localization resources have matching keys", () => {
 });
 
 test("runtime localization resources cover all source messages", () => {
-  const source = ["src/extension.ts", "src/git.ts"]
+  const source = ["src/extension.ts", "src/git.ts", "src/codeCompletion.ts"]
     .map((file) => readFileSync(resolve(projectRoot, file), "utf8"))
     .join("\n");
   const sourceMessages = Array.from(

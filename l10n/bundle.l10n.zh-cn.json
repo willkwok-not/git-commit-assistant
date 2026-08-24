@@ -18,5 +18,8 @@
   "Git support is currently disabled in VS Code.": "VS Code 的 Git 功能当前未启用",
   "No Git repositories were found in the current workspace.": "当前工作区中没有 Git 仓库",
   "Select a Git repository for commit message generation": "选择要生成提交消息的 Git 仓库",
-  "No staged changes. Stage files before generating a commit message.": "暂存区没有变更，请先暂存文件"
+  "No staged changes. Stage files before generating a commit message.": "暂存区没有变更，请先暂存文件",
+  "Enable code completion before requesting a suggestion.": "请先启用代码补全，再请求建议",
+  "Code completion is disabled for the {0} language.": "{0} 语言已被排除在代码补全之外",
+  "Requesting code completion": "正在请求代码补全"
 }

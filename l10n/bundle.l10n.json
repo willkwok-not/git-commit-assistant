@@ -18,5 +18,8 @@
   "Git support is currently disabled in VS Code.": "Git support is currently disabled in VS Code.",
   "No Git repositories were found in the current workspace.": "No Git repositories were found in the current workspace.",
   "Select a Git repository for commit message generation": "Select a Git repository for commit message generation",
-  "No staged changes. Stage files before generating a commit message.": "No staged changes. Stage files before generating a commit message."
+  "No staged changes. Stage files before generating a commit message.": "No staged changes. Stage files before generating a commit message.",
+  "Enable code completion before requesting a suggestion.": "Enable code completion before requesting a suggestion.",
+  "Code completion is disabled for the {0} language.": "Code completion is disabled for the {0} language.",
+  "Requesting code completion": "Requesting code completion"
 }
