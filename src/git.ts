@@ -16,7 +16,8 @@ interface GitExtension {
   getAPI(version: 1): GitApi;
 }
 
-export async function getRepository(): Promise<GitRepository> {
+// 根据源代码管理入口传入的地址定位仓库，避免多仓库工作区选错目标。
+export async function getRepository(repositoryUri?: vscode.Uri): Promise<GitRepository> {
   const extension = vscode.extensions.getExtension<GitExtension>("vscode.git");
   if (!extension) {
     throw new Error(vscode.l10n.t("The built-in VS Code Git extension was not found."));
@@ -30,6 +31,13 @@ export async function getRepository(): Promise<GitRepository> {
   const api = git.getAPI(1);
   if (api.repositories.length === 0) {
     throw new Error(vscode.l10n.t("No Git repositories were found in the current workspace."));
+  }
+
+  if (repositoryUri) {
+    const selectedRepository = api.getRepository(repositoryUri);
+    if (selectedRepository) {
+      return selectedRepository;
+    }
   }
 
   const activeUri = vscode.window.activeTextEditor?.document.uri;

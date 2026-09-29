@@ -9,7 +9,9 @@ let activeGeneration: vscode.CancellationTokenSource | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand("gitCommitAssistant.generate", () => generate(context)),
+    vscode.commands.registerCommand("gitCommitAssistant.generate", (sourceControl?: vscode.SourceControl) =>
+      generate(context, sourceControl?.rootUri),
+    ),
     vscode.commands.registerCommand("gitCommitAssistant.cancel", cancelGeneration),
     vscode.commands.registerCommand("gitCommitAssistant.setApiKey", () => setApiKey(context)),
     vscode.commands.registerCommand("gitCommitAssistant.clearApiKey", () => clearApiKey(context)),
@@ -61,7 +63,8 @@ async function triggerCodeCompletion(context: vscode.ExtensionContext): Promise<
   await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger");
 }
 
-async function generate(context: vscode.ExtensionContext): Promise<void> {
+// 优先为用户点击的源代码管理仓库生成提交消息。
+async function generate(context: vscode.ExtensionContext, repositoryUri?: vscode.Uri): Promise<void> {
   if (activeGeneration) {
     void vscode.window.showInformationMessage(`Git Commit Assistant: ${vscode.l10n.t("A generation task is already running.")}`);
     return;
@@ -87,7 +90,7 @@ async function generate(context: vscode.ExtensionContext): Promise<void> {
           const config = vscode.workspace.getConfiguration("gitCommitAssistant");
           const baseUrl = requiredSetting(config.get<string>("baseUrl"), "gitCommitAssistant.baseUrl");
           const model = requiredSetting(config.get<string>("model"), "gitCommitAssistant.model");
-          const repository = await getRepository();
+          const repository = await getRepository(repositoryUri);
           const originalInput = repository.inputBox.value;
           let latestStreamedInput: string | undefined;
           restoreStreamedInput = () => {
