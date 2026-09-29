@@ -18,8 +18,8 @@ This document covers extension development, testing, and packaging. See [README.
 Install dependencies and compile:
 
 ```bash
-npm install
-npm run compile
+pnpm install
+pnpm compile
 ```
 
 Open the project in VS Code and press `F5` to launch the Extension Development Host.
@@ -36,7 +36,7 @@ The `Git Commit Assistant` output channel, request notification, full prompts, a
 For incremental compilation:
 
 ```bash
-npm run watch
+pnpm watch
 ```
 
 ## Project Structure
@@ -86,7 +86,7 @@ The `gitCommitAssistant.language` setting controls generated commit messages and
 Run compilation and all tests:
 
 ```bash
-npm test
+pnpm test
 ```
 
 Tests cover prompt truncation, message cleanup, code-completion context, result limits, structural pairing and indentation,
@@ -95,10 +95,10 @@ Chat Completions streaming, custom endpoints, Responses API streaming and non-st
 ## Packaging
 
 ```bash
-npm run package
+pnpm package
 ```
 
-The `vscode:prepublish` hook compiles the extension before producing an installable `.vsix` file. The extension details
+The `vscode:prepublish` hook compiles the extension before producing an installable `.vsix` file in `dist/`. The extension details
 page displays the root `README.md`.
 
 `.vscodeignore` excludes source code, tests, source maps, and development configuration. Runtime localization resources
@@ -106,8 +106,8 @@ must remain in the package.
 
 ## Pre-release Checklist
 
-1. Run `npm test`.
+1. Run `pnpm test`.
 2. Check the version and release notes.
-3. Run `npm run package`.
+3. Run `pnpm package`.
 4. Install the VSIX in a clean VS Code environment.
 5. Verify the English and Simplified Chinese UI, settings, commands, generation, cancellation, and API key flows.

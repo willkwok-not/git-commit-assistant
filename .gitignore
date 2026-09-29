@@ -1,5 +1,7 @@
 node_modules/
-out/
-*.vsix
 .vscode-test/
+.pnpm-store/
+out/
+dist/
+*.vsix
 *.log

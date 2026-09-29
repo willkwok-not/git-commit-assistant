@@ -5,4 +5,8 @@ tsconfig.json
 **/*.map
 **/*.test.js
 node_modules/**
+.pnpm-store/**
+dist/**
+pnpm-lock.yaml
+pnpm-workspace.yaml
 debug.log

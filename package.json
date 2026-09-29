@@ -3,7 +3,8 @@
   "displayName": "Git Commit Assistant",
   "icon": "images/icon.png",
   "description": "%extension.description%",
-  "version": "1.1.0",
+  "version": "1.1.1",
+  "packageManager": "pnpm@11.22.0",
   "publisher": "willkwok",
   "license": "MIT",
   "repository": {
@@ -216,15 +217,16 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "pnpm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test out/test/*.test.js",
-    "package": "npx @vscode/vsce package"
+    "test": "pnpm run compile && node --test out/test/*.test.js",
+    "package": "node -e \"require('fs').mkdirSync('dist', { recursive: true })\" && pnpm exec vsce package --out dist"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^4.0.0",
     "typescript": "^5.4.5"
   }
 }

@@ -17,8 +17,8 @@
 安装依赖并编译：
 
 ```bash
-npm install
-npm run compile
+pnpm install
+pnpm compile
 ```
 
 在 VS Code 中打开项目，按 `F5` 启动 Extension Development Host
@@ -35,7 +35,7 @@ npm run compile
 开发期间可以运行增量编译：
 
 ```bash
-npm run watch
+pnpm watch
 ```
 
 ## 项目结构
@@ -81,7 +81,7 @@ Chat Completions 使用 `messages` 请求体，并解析 `choices[].delta.conten
 运行编译和全部测试：
 
 ```bash
-npm test
+pnpm test
 ```
 
 当前测试覆盖提示词截断、提交消息清理、代码补全上下文、结果限制、结构配对和缩进处理、Chat Completions 流式输出、自定义接口地址、Responses API 流式与非流式响应，以及缺少配置时的错误类型
@@ -89,17 +89,17 @@ npm test
 ## 打包
 
 ```bash
-npm run package
+pnpm package
 ```
 
-打包前会通过 `vscode:prepublish` 自动编译，并生成可通过“扩展：从 VSIX 安装”安装的 `.vsix` 文件
+打包前会通过 `vscode:prepublish` 自动编译，并在 `dist/` 目录生成可通过“扩展：从 VSIX 安装”安装的 `.vsix` 文件
 
 `.vscodeignore` 用于排除源码、测试、Source Map 和开发配置，运行时只需要清单、资源和编译后的代码
 
 ## 发布前检查
 
-1. 运行 `npm test`
+1. 运行 `pnpm test`
 2. 确认 `package.json` 的版本号和更新日志
-3. 运行 `npm run package`
+3. 运行 `pnpm package`
 4. 在新的 Extension Development Host 或干净的 VS Code 环境中安装 VSIX
 5. 检查扩展详情、设置项、命令、生成、取消和 API Key 管理流程
